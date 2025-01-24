@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DataMatrix Decoder Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .container { width: 80%; margin: 0 auto; }
+        h1 { text-align: center; }
+        pre { background: #f4f4f4; padding: 10px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>DataMatrix Decoder Dashboard</h1>
+        <h2>Status</h2>
+        <pre id="status"></pre>
+        <h2>Devices Status</h2>
+        <pre id="devices_status"></pre>
+        <h2>Current State</h2>
+        <pre id="state"></pre>
+    </div>
+    <script>
+        async function fetchJsonData(url, elementId) {
+            const response = await fetch(url);
+            const data = await response.json();
+            document.getElementById(elementId).innerText = JSON.stringify(data, null, 2);
+        }
+
+        function updateData() {
+            fetchJsonData('/status', 'status');
+            fetchJsonData('/devices_status', 'devices_status');
+            fetchJsonData('/state', 'state');
+        }
+
+        setInterval(updateData, 2000);
+        updateData();
+    </script>
+</body>
+</html>
