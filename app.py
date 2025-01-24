@@ -2,9 +2,7 @@ import asyncio
 import logging
 import sys
 import argparse
-from backend.src.BarcodePrinter import DummyBaseBarcodePrinter
 from backend.src.BoxMarker import BoxMarker
-from backend.src.BarcodeIssuer import DummyBarcodeIssuer
 from backend.src.FtpPublisher import FTPPublisher
 from backend.src.DataMatrixDecoder import DataMatrixDecoder
 
@@ -33,13 +31,10 @@ async def main():
         ]
     )
 
-    printer = DummyBaseBarcodePrinter()
-    barcode_issuer = DummyBarcodeIssuer()
     ftp_publisher = FTPPublisher(args.ftp_host)
-    marker = BoxMarker(printer, barcode_issuer, ftp_publisher, args.expected_num)
+    marker = BoxMarker(ftp_publisher, args.expected_num)
     ftp_publisher.subscribe(marker)
     ftp_publisher.connect()
-    printer.subscribe(marker)
     decoder = DataMatrixDecoder(url=args.url, max_count=args.expected_num, timeout=args.timeout, shrink=args.shrink,
                                 callback=marker.process_detected_codes)
     decoder.subscribe(marker)
