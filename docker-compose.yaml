@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: datamatrix_decoder_app
+    environment:
+      - URL=${URL}
+      - TIMEOUT=${TIMEOUT}
+      - SHRINK=${SHRINK}
+      - EXPECTED_NUM=${EXPECTED_NUM}
+      - FTP_HOST=${FTP_HOST}
+      - LOG_LEVEL=${LOG_LEVEL}
+    ports:
+      - "8000:8000"
+    command: >
+      python app.py
+      --url ${URL}
+      --timeout ${TIMEOUT}
+      --shrink ${SHRINK}
+      --expected_num ${EXPECTED_NUM}
+      --ftp_host ${FTP_HOST}
+      --log_level ${LOG_LEVEL}
