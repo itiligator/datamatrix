@@ -183,6 +183,9 @@ class BoxMarker(DeviceObserver):
         else:
             return "OK"
 
+    def get_detected_codes(self) -> List[str]:
+        return self._state.detected_codes
+
     def reset(self):
         self._state.reset(self)
         self.set_state(ReadyState)

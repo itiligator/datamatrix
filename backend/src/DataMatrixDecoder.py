@@ -47,7 +47,7 @@ class DataMatrixDecoder(StatusObservable):
                 decoded_messages = await self.decode_datamatrix(image)
                 codes = [msg.data.decode('utf-8') for msg in decoded_messages]
                 await self.callback(codes)
-                self.status = DatamatrixDecoderStatus.INIT
+                self.status = DatamatrixDecoderStatus.FETCHING_IMAGE
                 self.notify()
             else:
                 self.status = DatamatrixDecoderStatus.GENERAL_FAILURE

@@ -42,6 +42,11 @@ async def get_state():
     state = await box_marker.get_state()
     return jsonify(state=state)
 
+@app.route('/detected_codes')
+async def get_detected_codes():
+    detected_codes = box_marker.get_detected_codes()
+    return jsonify(detected_codes=detected_codes)
+
 def start_flask():
     app.run(host='0.0.0.0', port=8001)
 

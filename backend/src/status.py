@@ -21,6 +21,7 @@ class DatamatrixDecoderStatus(Enum):
     GENERAL_FAILURE = "GENERAL_FAILURE"
     UNKNOWN_ERROR = "UNKNOWN_ERROR"
     IMAGE_UNAVAILABLE = "IMAGE_UNAVAILABLE"
+    FETCHING_IMAGE = "FETCHING_IMAGE"
     OK = "OK"
 
     def __str__(self):
