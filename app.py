@@ -1,10 +1,11 @@
 import asyncio
 import logging
+import os
 import sys
 import argparse
 import threading
 
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, send_file
 from backend.src.BoxMarker import BoxMarker
 from backend.src.FtpPublisher import FTPPublisher
 from backend.src.DataMatrixDecoder import DataMatrixDecoder
@@ -50,6 +51,15 @@ async def get_state():
 async def get_detected_codes():
     detected_codes = box_marker.get_detected_codes()
     return jsonify(detected_codes=detected_codes)
+
+@app.route('/files')
+async def list_files():
+    files = os.listdir('results')
+    return jsonify(files)
+
+@app.route('/files/<filename>')
+async def download_file(filename):
+    return send_file(os.path.join('results', filename), as_attachment=True)
 
 def start_flask():
     app.run(host='0.0.0.0', port=http_port)
