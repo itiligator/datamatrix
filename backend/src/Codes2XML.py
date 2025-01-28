@@ -1,4 +1,6 @@
 import xml.etree.ElementTree as et
+from io import StringIO
+
 
 def generate_xml(bottle_codes: list[str], group_code: str) -> str:
     root = et.Element("codes")
@@ -8,4 +10,9 @@ def generate_xml(bottle_codes: list[str], group_code: str) -> str:
         km.text = code
         ka = et.SubElement(row, "ka")
         ka.text = group_code
-    return et.tostring(root, encoding="unicode", method="xml")
+
+    tree = et.ElementTree(root)
+    et.indent(tree, '  ')
+    xml_buffer = StringIO()
+    tree.write(xml_buffer, encoding="unicode", xml_declaration=True)
+    return xml_buffer.getvalue()
