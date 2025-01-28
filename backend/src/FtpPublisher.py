@@ -1,14 +1,18 @@
 import logging
 import ftplib
+import os
 
 from backend.src.status import FTPPublisherStatus
 from backend.src.StatusObservable import StatusObservable
 
 
 class FTPPublisher(StatusObservable):
-    def __init__(self, host: str, port: int | None = None, username: str | None = None, password: str | None = None, upload_dir: str | None = 'upload'):
+    def __init__(self, host: str, port: int | None = None, username: str | None = None, password: str | None = None,
+                 upload_dir: str | None = 'upload'):
         super().__init__()
         self.status = FTPPublisherStatus.INIT
+        self.results_dir = 'results'
+        os.makedirs(self.results_dir, exist_ok=True)
         logging.info(f"FTPPublisher initialized with host: {host}, port: {port}, username: {username}")
         self.notify()
 
@@ -19,7 +23,7 @@ class FTPPublisher(StatusObservable):
     def upload_file(self, file_path: str, content: str):
         logging.info(f"Saving file {file_path}...")
         try:
-            with open(file_path, 'w') as file:
+            with open(os.path.join(self.results_dir, file_path), 'w') as file:
                 file.write(content)
                 logging.info(f"File {file_path} saved")
         except Exception as e:
