@@ -82,6 +82,7 @@ def parse_args():
 
 
 def main():
+    global http_port
     args = parse_args()
 
     logging.basicConfig(
@@ -91,7 +92,7 @@ def main():
             logging.StreamHandler(sys.stdout)
         ]
     )
-
+    http_port = args.http_port
     flask_thread = threading.Thread(target=start_flask)
     flask_thread.start()
 
