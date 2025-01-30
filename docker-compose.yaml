@@ -4,6 +4,8 @@ services:
   app:
     build: .
     container_name: datamatrix_decoder_app
+    volumes:
+      - ${RESULTS_DIR}:/app/results
     environment:
       - URL=${URL}
       - TIMEOUT=${TIMEOUT}
@@ -12,6 +14,7 @@ services:
       - FTP_HOST=${FTP_HOST}
       - LOG_LEVEL=${LOG_LEVEL}
       - HTTP_PORT=${HTTP_PORT}
+      - RESULTS_DIR=${RESULTS_DIR}
     ports:
       - "8000:8000"
     network_mode: "host"
