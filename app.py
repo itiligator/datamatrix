@@ -28,38 +28,46 @@ async def run_marker(ftp_host: str, url: str, timeout: int, shrink: int, expecte
     decoder.subscribe(box_marker)
     await decoder.run()
 
+
 @app.route('/')
 def index():
     return render_template('index.html')
+
 
 @app.route('/status')
 async def get_status():
     status = await box_marker.get_status()
     return jsonify(status=status)
 
+
 @app.route('/devices_status')
 async def get_devices_status():
     devices_status = await box_marker.get_devices_status()
     return jsonify(devices_status)
+
 
 @app.route('/state')
 async def get_state():
     state = await box_marker.get_state()
     return jsonify(state=state)
 
+
 @app.route('/detected_codes')
 async def get_detected_codes():
     detected_codes = box_marker.get_detected_codes()
     return jsonify(detected_codes=detected_codes)
+
 
 @app.route('/files')
 async def list_files():
     files = os.listdir('results')
     return jsonify(files)
 
+
 @app.route('/files/<filename>')
 async def download_file(filename):
     return send_file(os.path.join('results', filename), as_attachment=True)
+
 
 def start_flask():
     app.run(host='0.0.0.0', port=http_port)
@@ -75,7 +83,7 @@ def parse_args():
     parser.add_argument('--ftp_host', type=str, required=True, help='Хост FTP сервера')
     parser.add_argument('--ftp_user', type=str, required=False, help='Пользователь от FTP')
     parser.add_argument('--ftp_password', type=str, required=False, help='Пароль от FTP')
-    parser.add_argument('--http_port', type=str, required=False, default=8001,help='Порт для запуска бэка')
+    parser.add_argument('--http_port', type=str, required=False, default=8001, help='Порт для запуска бэка')
     parser.add_argument('--log_level', type=str, choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                         default='INFO', help='Уровень логирования')
     return parser.parse_args()
@@ -96,8 +104,9 @@ def main():
     flask_thread = threading.Thread(target=start_flask)
     flask_thread.start()
 
-    asyncio.run(run_marker(url=args.url, timeout=args.timeout*1000, shrink=args.shrink, expected_num=args.expected_num,
-                           ftp_host=args.ftp_host))
+    asyncio.run(
+        run_marker(url=args.url, timeout=args.timeout * 1000, shrink=args.shrink, expected_num=args.expected_num,
+                   ftp_host=args.ftp_host))
 
 
 if __name__ == "__main__":
