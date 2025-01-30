@@ -1,3 +1,5 @@
+import base64
+
 import cv2
 import numpy as np
 import requests
@@ -45,7 +47,7 @@ class DataMatrixDecoder(StatusObservable):
                 self.status = DatamatrixDecoderStatus.DECODING
                 self.notify()
                 decoded_messages = await self.decode_datamatrix(image)
-                codes = [msg.data.decode('utf-8') for msg in decoded_messages]
+                codes = [base64.b64encode(msg.data).decode('utf-8')  for msg in decoded_messages]
                 await self.callback(codes)
                 self.status = DatamatrixDecoderStatus.FETCHING_IMAGE
                 self.notify()
