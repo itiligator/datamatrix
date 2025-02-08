@@ -24,11 +24,12 @@ class DataMatrixDecoder(StatusObservable):
         self.callback = callback
         self.status = DatamatrixDecoderStatus.INIT
         self.notify()
+        self.session = requests.Session()
 
     async def fetch_image(self):
         try:
             # TODO: make it configurable
-            response = requests.get(self.url, timeout=2, auth=HTTPDigestAuth('admin', 'salek2025'))
+            response = self.session.get(self.url, timeout=2, auth=HTTPDigestAuth('admin', 'salek2025'))
             response.raise_for_status()
             image_array = np.asarray(bytearray(response.content), dtype=np.uint8)
             image = cv2.imdecode(image_array, cv2.IMREAD_UNCHANGED)
