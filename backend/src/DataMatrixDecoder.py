@@ -1,6 +1,5 @@
 import base64
 from asyncio import Queue
-from typing import Optional
 
 import cv2
 import numpy as np
@@ -24,12 +23,12 @@ class DataMatrixDecoder(StatusObservable):
         self.timeout = timeout
         self.shrink = shrink
         self.callback = callback
-        self.queue = Queue(maxsize=10)  # Limit queue size to prevent memory issues
+        self.queue = Queue()  # Limit queue size to prevent memory issues
         self.status = DatamatrixDecoderStatus.INIT
         self.notify()
         self.session = requests.Session()
 
-    async def fetch_image(self):
+    def fetch_image(self):
         try:
             # TODO: make it configurable
             response = self.session.get(self.url, timeout=2, auth=HTTPDigestAuth('admin', 'salek2025'))
@@ -42,7 +41,6 @@ class DataMatrixDecoder(StatusObservable):
             logging.error(f"Failed to fetch image: {e}")
             self.status = DatamatrixDecoderStatus.IMAGE_UNAVAILABLE
             self.notify()
-            await asyncio.sleep(2)
             return None
 
     async def image_producer(self):
@@ -51,35 +49,37 @@ class DataMatrixDecoder(StatusObservable):
             try:
                 self.status = DatamatrixDecoderStatus.FETCHING_IMAGE
                 self.notify()
-                image = await self.fetch_image()
+                await asyncio.sleep(0.01)
+                image = self.fetch_image()
                 if image is not None:
                     await self.queue.put(image)
-                    print(self.queue.qsize())
+                    await asyncio.sleep(0.01)
             except Exception as e:
                 logging.error(f"Producer error: {e}")
                 self.status = DatamatrixDecoderStatus.GENERAL_FAILURE
                 self.notify()
-                await asyncio.sleep(2)
+                await asyncio.sleep(0.1)
 
     async def image_consumer(self):
         """Process images from the queue"""
         while True:
             try:
+                await asyncio.sleep(0.01)
                 image = await self.queue.get()
-                print("GOT IMAGE")
                 self.status = DatamatrixDecoderStatus.DECODING
                 self.notify()
-                decoded_messages = await self.decode_datamatrix(image)
+                decoded_messages = self.decode_datamatrix(image)
                 codes = [base64.b64encode(msg.data).decode('utf-8') for msg in decoded_messages]
                 await self.callback(codes)
+                await asyncio.sleep(0.01)
                 self.queue.task_done()
             except Exception as e:
                 logging.error(f"Consumer error: {e}")
                 self.status = DatamatrixDecoderStatus.GENERAL_FAILURE
                 self.notify()
-                await asyncio.sleep(2)
+                await asyncio.sleep(0.1)
 
-    async def decode_datamatrix(self, image):
+    def decode_datamatrix(self, image):
         # TODO: make it configurable
         return pylibdmtx.decode(image, timeout=self.timeout, max_count=self.max_count,
                                 shape=DmtxSymbolSize.DmtxSymbol22x22, deviation=5, threshold=40, min_edge=95,
