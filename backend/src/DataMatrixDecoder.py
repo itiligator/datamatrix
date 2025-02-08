@@ -7,6 +7,9 @@ import asyncio
 from pylibdmtx import pylibdmtx
 import logging
 
+from pylibdmtx.wrapper import DmtxSymbolSize
+from requests.auth import HTTPDigestAuth
+
 from backend.src.StatusObservable import StatusObservable
 from backend.src.status import DatamatrixDecoderStatus
 
@@ -38,7 +41,10 @@ class DataMatrixDecoder(StatusObservable):
             return None
 
     async def decode_datamatrix(self, image):
-        return pylibdmtx.decode(image, shrink=self.shrink, timeout=self.timeout, max_count=self.max_count)
+        # TODO: make it configurable
+        return pylibdmtx.decode(image, timeout=self.timeout, max_count=self.max_count,
+                                shape=DmtxSymbolSize.DmtxSymbol22x22, deviation=5, threshold=40, min_edge=95,
+                                max_edge=125)
 
     async def run(self):
         while True:
@@ -47,7 +53,7 @@ class DataMatrixDecoder(StatusObservable):
                 self.status = DatamatrixDecoderStatus.DECODING
                 self.notify()
                 decoded_messages = await self.decode_datamatrix(image)
-                codes = [base64.b64encode(msg.data).decode('utf-8')  for msg in decoded_messages]
+                codes = [base64.b64encode(msg.data).decode('utf-8') for msg in decoded_messages]
                 await self.callback(codes)
                 self.status = DatamatrixDecoderStatus.FETCHING_IMAGE
                 self.notify()
