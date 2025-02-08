@@ -52,9 +52,8 @@ class State:
 
     def process_detected_codes(self, codes: List[str]) -> None:
         with self._lock:
-            logging.info(f"Processing detected codes: {codes}")
-            logging.info(f"Current collected codes: {self._detected_codes}")
             self._process_detected_codes(codes)
+            logging.info(f"STATE {self.name}\t{len(codes):2d}/{len(self._detected_codes):2d}")
 
     def _process_detected_codes(self, codes: List[str]) -> None:
         pass
