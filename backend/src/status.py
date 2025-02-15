@@ -1,13 +1,14 @@
 from enum import Enum
 
 
-class FTPPublisherStatus(Enum):
+class FileSaverStatus(Enum):
     UNDEFINED = "UNDEFINED"
     INIT = "INIT"
-    CONNECTED = "CONNECTED"
-    PUBLISHING = "PUBLISHING"
+    READY = "READY"
+    FOLDER_CREATION_FAILED = "FOLDER_CREATION_FAILED"
+    SAVING = "SAVING"
+    SAVING_FAILED = "SAVING_FAILED"
     GENERAL_FAILURE = "GENERAL_FAILURE"
-    DISCONNECTED = "DISCONNECTED"
     UNKNOWN_ERROR = "UNKNOWN_ERROR"
 
     def __str__(self):
@@ -30,22 +31,22 @@ class DatamatrixDecoderStatus(Enum):
 
 class DevicesStatusesHandler:
     def __init__(self):
-        self._devices_status = {"ftp_publisher": FTPPublisherStatus.UNDEFINED,
+        self._devices_status = {"file_saver": FileSaverStatus.UNDEFINED,
                                 "datamatrix_decoder": DatamatrixDecoderStatus.UNDEFINED}
 
     def handle_status(self, status):
         self._update_device_status(status)
 
     def _update_device_status(self, status):
-        if isinstance(status, FTPPublisherStatus):
-            self._devices_status["ftp_publisher"] = status
+        if isinstance(status, FileSaverStatus):
+            self._devices_status["file_saver"] = status
         if isinstance(status, DatamatrixDecoderStatus):
             self._devices_status["datamatrix_decoder"] = status
 
     def is_error(self):
-        return (self._devices_status["ftp_publisher"] in (
-            FTPPublisherStatus.GENERAL_FAILURE,
-            FTPPublisherStatus.UNKNOWN_ERROR) or
+        return (self._devices_status["file_saver"] in (
+            FileSaverStatus.GENERAL_FAILURE,
+            FileSaverStatus.UNKNOWN_ERROR) or
                 self._devices_status["datamatrix_decoder"] in (
                     DatamatrixDecoderStatus.GENERAL_FAILURE,
                     DatamatrixDecoderStatus.UNKNOWN_ERROR,

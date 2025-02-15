@@ -7,7 +7,7 @@ import threading
 
 from flask import Flask, jsonify, render_template, send_file
 from backend.src.BoxMarker import BoxMarker
-from backend.src.FtpPublisher import FTPPublisher
+from backend.src.FileSaver import FileSaver
 from backend.src.DataMatrixDecoder import DataMatrixDecoder
 
 log = logging.getLogger('werkzeug')
@@ -17,12 +17,11 @@ box_marker: BoxMarker | None = None
 http_port: int = 8001
 
 
-async def run_marker(ftp_host: str, url: str, timeout: int, shrink: int, expected_num: int):
+async def run_marker(url: str, timeout: int, shrink: int, expected_num: int):
     global box_marker
-    ftp_publisher = FTPPublisher(ftp_host)
-    box_marker = BoxMarker(ftp_publisher, expected_num)
-    ftp_publisher.subscribe(box_marker)
-    ftp_publisher.connect()
+    file_saver = FileSaver()
+    box_marker = BoxMarker(file_saver, expected_num)
+    file_saver.subscribe(box_marker)
     decoder = DataMatrixDecoder(url=url, max_count=expected_num, timeout=timeout, shrink=shrink,
                                 callback=box_marker.process_detected_codes)
     decoder.subscribe(box_marker)
@@ -80,9 +79,6 @@ def parse_args():
     parser.add_argument('--shrink', type=int, required=False, default=2,
                         help='Шаг пропуска пискселей для уменьшения изображения для декодирования DataMatrix')
     parser.add_argument('--expected_num', type=int, required=True, help='Ожидаемое количество бутылок')
-    parser.add_argument('--ftp_host', type=str, required=True, help='Хост FTP сервера')
-    parser.add_argument('--ftp_user', type=str, required=False, help='Пользователь от FTP')
-    parser.add_argument('--ftp_password', type=str, required=False, help='Пароль от FTP')
     parser.add_argument('--http_port', type=str, required=False, default=8001, help='Порт для запуска бэка')
     parser.add_argument('--log_level', type=str, choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                         default='INFO', help='Уровень логирования')
@@ -105,8 +101,7 @@ def main():
     flask_thread.start()
 
     asyncio.run(
-        run_marker(url=args.url, timeout=args.timeout * 1000, shrink=args.shrink, expected_num=args.expected_num,
-                   ftp_host=args.ftp_host))
+        run_marker(url=args.url, timeout=args.timeout * 1000, shrink=args.shrink, expected_num=args.expected_num))
 
 
 if __name__ == "__main__":

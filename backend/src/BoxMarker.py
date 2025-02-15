@@ -9,7 +9,7 @@ from backend.src.status import DevicesStatusesHandler
 
 from typing import ClassVar, List
 
-from backend.src.FtpPublisher import FTPPublisher
+from backend.src.FileSaver import FileSaver
 
 
 class State:
@@ -134,11 +134,11 @@ class ErrorState(State):
 class BoxMarker(DeviceObserver):
     _state: State
     expected_bottles_number: int
-    ftp_publisher: FTPPublisher | None = None
+    file_saver: FileSaver | None = None
 
-    def __init__(self, ftp_publisher: FTPPublisher, expected_bottles_number: int) -> None:
+    def __init__(self, file_saver: FileSaver, expected_bottles_number: int) -> None:
         self.expected_bottles_number = expected_bottles_number
-        self._ftp_publisher = ftp_publisher
+        self._file_saver = file_saver
         self._state = ReadyState()
         self.reset()
 
@@ -165,8 +165,8 @@ class BoxMarker(DeviceObserver):
 
     def publish_xml(self, xml_file_content: str, filename: str):
         logging.info(f"Publishing XML file {filename}")
-        if self._ftp_publisher:
-            self._ftp_publisher.upload_file(filename, xml_file_content)
+        if self._file_saver:
+            self._file_saver.save_file(filename, xml_file_content)
 
     async def get_state(self) -> str:
         return self._state.name
