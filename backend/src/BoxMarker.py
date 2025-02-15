@@ -79,12 +79,9 @@ class ReadyState(State):
         self._detected_group_code = None
 
     def _process_detected_codes(self, codes):
-        if 0 < len(codes) < self._box_marker.expected_bottles_number:
+        if 0 < len(codes) <= self._box_marker.expected_bottles_number:
             self._detected_codes = codes
             self._box_marker.set_state(CollectingCodesState)
-        elif len(codes) == self._box_marker.expected_bottles_number:
-            self._detected_codes = codes
-            self._box_marker.set_state(CollectSingleGroupCode)
         elif len(codes) > self._box_marker.expected_bottles_number:
             self._detected_codes = []
             self._box_marker.set_state(TooMuchCodesState)
