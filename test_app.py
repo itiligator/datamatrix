@@ -5,7 +5,7 @@ import threading
 
 from flask import Flask, jsonify, render_template
 from backend.src.BoxMarker import BoxMarker
-from backend.src.FtpPublisher import FTPPublisher
+from backend.src.FileSaver import FileSaver
 from backend.src.DataMatrixDecoder import DataMatrixDecoder
 
 app = Flask(__name__)
@@ -14,10 +14,9 @@ box_marker: BoxMarker | None = None
 async def run_marker():
     global box_marker
     expected_num = 3
-    ftp_publisher = FTPPublisher('localhost')
-    box_marker = BoxMarker(ftp_publisher, expected_num)
-    ftp_publisher.subscribe(box_marker)
-    ftp_publisher.connect()
+    file_saver = FileSaver()
+    box_marker = BoxMarker(file_saver, expected_num)
+    file_saver.subscribe(box_marker)
     decoder = DataMatrixDecoder(url='http://192.168.1.101:8080/photoaf.jpg', max_count=3, timeout=2000, shrink=2,
                                 callback=box_marker.process_detected_codes)
     decoder.subscribe(box_marker)

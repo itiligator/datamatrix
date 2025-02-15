@@ -11,7 +11,6 @@ services:
       - TIMEOUT=${TIMEOUT}
       - SHRINK=${SHRINK}
       - EXPECTED_NUM=${EXPECTED_NUM}
-      - FTP_HOST=${FTP_HOST}
       - LOG_LEVEL=${LOG_LEVEL}
       - HTTP_PORT=${HTTP_PORT}
       - RESULTS_DIR=${RESULTS_DIR}
@@ -24,6 +23,5 @@ services:
       --timeout ${TIMEOUT}
       --shrink ${SHRINK}
       --expected_num ${EXPECTED_NUM}
-      --ftp_host ${FTP_HOST}
       --log_level ${LOG_LEVEL}
       --http_port ${HTTP_PORT}

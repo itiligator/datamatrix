@@ -16,7 +16,6 @@
     TIMEOUT=2
     SHRINK=2
     EXPECTED_NUM=3
-    FTP_HOST=localhost
     LOG_LEVEL=INFO
     HTTP_PORT=8081
     RESULTS_DIR=./results    # Путь к директории с результатами
