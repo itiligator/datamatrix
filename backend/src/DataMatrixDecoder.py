@@ -47,11 +47,14 @@ class DataMatrixDecoder(StatusObservable):
         """Continuously fetch images and put them in the queue"""
         while True:
             try:
-                self.status = DatamatrixDecoderStatus.FETCHING_IMAGE
-                self.notify()
+                if self.status != DatamatrixDecoderStatus.IMAGE_UNAVAILABLE:
+                    self.status = DatamatrixDecoderStatus.FETCHING_IMAGE
+                    self.notify()
                 await asyncio.sleep(0.01)
                 image = self.fetch_image()
                 if image is not None:
+                    self.status = DatamatrixDecoderStatus.OK
+                    self.notify()
                     await self.queue.put(image)
                     await asyncio.sleep(0.01)
             except Exception as e:
