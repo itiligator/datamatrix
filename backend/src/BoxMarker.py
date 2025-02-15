@@ -16,20 +16,17 @@ class State:
     _box_marker: BoxMarker | None = None
     _detected_codes: List[str] = []
     _detected_group_code: str | None = None
-    name: ClassVar[str] = "UNDEFINED"
-    devices_status_handler: DevicesStatusesHandler
+    name: ClassVar[str] = "НЕОПРЕДЕЛЕНО"
 
     def __init__(self, other_state: State = None) -> None:
         self._lock = threading.Lock()
-        self.devices_status_handler = DevicesStatusesHandler()
+
         if other_state:
             self._detected_codes = other_state.detected_codes
             self._detected_group_code = other_state._detected_group_code
             self._box_marker = other_state.box_marker
-            self.devices_status_handler = other_state.devices_status_handler
 
     def reset(self, box_marker: BoxMarker) -> None:
-        self.devices_status_handler = DevicesStatusesHandler()
         self._detected_codes = []
         self._detected_group_code = None
         self._box_marker = box_marker
@@ -52,8 +49,10 @@ class State:
 
     def process_detected_codes(self, codes: List[str]) -> None:
         with self._lock:
+            logging.info(f"Состояние: {self.name}.\tПрочитано кодов в кадре: {len(codes):2d}")
+            for code in codes:
+                logging.info(code[-7:-1])
             self._process_detected_codes(codes)
-            logging.info(f"STATE {self.name}\t{len(codes):2d}/{len(self._detected_codes):2d}")
 
     def _process_detected_codes(self, codes: List[str]) -> None:
         pass
@@ -61,41 +60,33 @@ class State:
     def do_job_once(self):
         pass
 
-    def handle_additional_devices_status(self, status):
-        with self._lock:
-            self.devices_status_handler.handle_status(status)
-            if self.devices_status_handler.is_error():
-                self._box_marker.set_state(ErrorState)
-            elif isinstance(self, ErrorState):
-                self.reset(self._box_marker)
-                self._box_marker.set_state(ReadyState)
-
 
 class ReadyState(State):
-    name = "READY"
+    name = "ГОТОВ"
 
     def do_job_once(self):
         self._detected_codes = []
         self._detected_group_code = None
 
     def _process_detected_codes(self, codes):
-        if 0 < len(codes) < self._box_marker.expected_bottles_number:
+        if 0 < len(codes) <= self._box_marker.expected_bottles_number:
             self._detected_codes = codes
             self._box_marker.set_state(CollectingCodesState)
-        elif len(codes) == self._box_marker.expected_bottles_number:
-            self._detected_codes = codes
-            self._box_marker.set_state(CollectSingleGroupCode)
         elif len(codes) > self._box_marker.expected_bottles_number:
             self._detected_codes = []
             self._box_marker.set_state(TooMuchCodesState)
 
 
 class CollectingCodesState(State):
-    name = "COLLECTING_CODES"
+    name = "РАСПОЗНАЮ КОДЫ С БУТЫЛОК"
 
     def _process_detected_codes(self, codes):
         union_codes = set(self._detected_codes).union(set(codes))
-        if len(codes) == 0:
+        logging.info(
+            f"Состояние: {self.name}.\tНакоплено: {len(union_codes):2d}/{self.box_marker.expected_bottles_number}")
+        for code in union_codes:
+            logging.info(code[-7:-1])
+        if len(union_codes) < self._box_marker.expected_bottles_number:
             self._box_marker.set_state(ReadyState)
         elif len(union_codes) > self._box_marker.expected_bottles_number:
             self._box_marker.set_state(TooMuchCodesState)
@@ -105,42 +96,50 @@ class CollectingCodesState(State):
 
 
 class TooMuchCodesState(ReadyState):
-    name = "TOO_MUCH_CODES"
+    name = "СЛИШКОМ МНОГО КОДОВ В КАДРЕ"
 
 
 class CollectSingleGroupCode(State):
-    name = "DETECTING_GROUP_CODE"
+    name = "РАСПОЗНАЮ КОД АГГРЕГАЦИИ"
 
     def _process_detected_codes(self, codes):
-        if len(codes) == 1 and codes[0] not in self._detected_codes:
+        new_codes = [code for code in codes if not code in self.detected_codes]
+        logging.info(f"Состояние: {self.name}.\tНовых кодов: {len(new_codes):2d}")
+        for code in new_codes:
+            logging.info(code[-7:-1])
+        if len(new_codes) == 1:
             self._detected_group_code = codes[0]
             self.box_marker.set_state(CreateAndPublishXML)
+        elif len(new_codes) > 1:
+            self.box_marker.set_state(TooMuchCodesState)
 
 
 class CreateAndPublishXML(State):
-    name = "CREATE_AND_PUBLISH_XML"
+    name = "СОЗДАЮ И СОХРАНЯЮ XML"
 
     def do_job_once(self):
-        logging.info("Creating and publishing XML")
+        logging.info(f"Создаю и сохраняю XML файл {self._detected_group_code}.xml")
         xml_file = generate_xml(self._detected_codes, self._detected_group_code)
         self._box_marker.publish_xml(xml_file, f"{self._detected_group_code}.xml")
         self._box_marker.set_state(ReadyState)
 
 
 class ErrorState(State):
-    name = "ERROR"
+    name = "ОШИБКА"
 
 
 class BoxMarker(DeviceObserver):
     _state: State
     expected_bottles_number: int
     file_saver: FileSaver | None = None
+    _devices_status_handler: DevicesStatusesHandler
 
     def __init__(self, file_saver: FileSaver, expected_bottles_number: int) -> None:
         self.expected_bottles_number = expected_bottles_number
         self._file_saver = file_saver
         self._state = ReadyState()
         self.reset()
+        self._devices_status_handler = DevicesStatusesHandler()
 
     def __del__(self):
         self.set_state(ReadyState)
@@ -150,21 +149,25 @@ class BoxMarker(DeviceObserver):
         if not issubclass(state, State):
             raise ValueError("State must be a subclass of State")
         if not isinstance(self._state, state):
+            logging.info(f"Запланирован переход состояния `{self._state.name}` -> `{state.name}`")
             if not isinstance(self._state, ErrorState):
                 self._state = state(self._state)
-            elif not self._state.devices_status_handler.is_error():
+            elif not self._devices_status_handler.is_error():
                 self._state = state(self._state)
-            logging.info(f"State changed to {self._state.name}")
-        self._state.do_job_once()
+            self._state.do_job_once()
+            logging.info(f"Выполнен переход в состояние {self._state.name}")
 
-    def update_devices(self, value):
-        self._state.handle_additional_devices_status(value)
+    def update_devices(self, status):
+        self._devices_status_handler.handle_status(status)
+        if self._devices_status_handler.is_error():
+            self.set_state(ErrorState)
+        elif isinstance(self._state, ErrorState):
+            self.reset()
 
     async def process_detected_codes(self, codes: List) -> None:
         self._state.process_detected_codes(codes)
 
     def publish_xml(self, xml_file_content: str, filename: str):
-        logging.info(f"Publishing XML file {filename}")
         if self._file_saver:
             self._file_saver.save_file(filename, xml_file_content)
 
@@ -172,13 +175,13 @@ class BoxMarker(DeviceObserver):
         return self._state.name
 
     async def get_devices_status(self) -> dict:
-        return self._state.devices_status_handler.get_statuses()
+        return self._devices_status_handler.get_statuses()
 
     async def get_status(self) -> str:
         if isinstance(self._state, ErrorState):
-            return "ERROR"
+            return "ОШИБКА"
         elif isinstance(self._state, TooMuchCodesState):
-            return "WARNING"
+            return "ПРЕДУПРЕЖДЕНИЕ"
         else:
             return "OK"
 

@@ -38,7 +38,7 @@ class DataMatrixDecoder(StatusObservable):
             self.status = DatamatrixDecoderStatus.OK
             return image
         except (requests.RequestException, cv2.error) as e:
-            logging.error(f"Failed to fetch image: {e}")
+            logging.error(f"Кадр недоступен по сети: {e}")
             self.status = DatamatrixDecoderStatus.IMAGE_UNAVAILABLE
             self.notify()
             return None
@@ -47,15 +47,18 @@ class DataMatrixDecoder(StatusObservable):
         """Continuously fetch images and put them in the queue"""
         while True:
             try:
-                self.status = DatamatrixDecoderStatus.FETCHING_IMAGE
-                self.notify()
+                if self.status != DatamatrixDecoderStatus.IMAGE_UNAVAILABLE:
+                    self.status = DatamatrixDecoderStatus.FETCHING_IMAGE
+                    self.notify()
                 await asyncio.sleep(0.01)
                 image = self.fetch_image()
                 if image is not None:
+                    self.status = DatamatrixDecoderStatus.OK
+                    self.notify()
                     await self.queue.put(image)
                     await asyncio.sleep(0.01)
             except Exception as e:
-                logging.error(f"Producer error: {e}")
+                logging.error(f"Ошибка получения картинки: {e}")
                 self.status = DatamatrixDecoderStatus.GENERAL_FAILURE
                 self.notify()
                 await asyncio.sleep(0.1)
@@ -74,7 +77,7 @@ class DataMatrixDecoder(StatusObservable):
                 await asyncio.sleep(0.01)
                 self.queue.task_done()
             except Exception as e:
-                logging.error(f"Consumer error: {e}")
+                logging.error(f"Ошибка распознавания кодов: {e}")
                 self.status = DatamatrixDecoderStatus.GENERAL_FAILURE
                 self.notify()
                 await asyncio.sleep(0.1)
@@ -94,7 +97,7 @@ class DataMatrixDecoder(StatusObservable):
                     self.image_consumer()
                 )
             except Exception as e:
-                logging.error(f"Main loop error: {e}")
+                logging.error(f"Общая ошибка главного цикла: {e}")
                 self.status = DatamatrixDecoderStatus.GENERAL_FAILURE
                 self.notify()
                 await asyncio.sleep(2)
