@@ -17,19 +17,16 @@ class State:
     _detected_codes: List[str] = []
     _detected_group_code: str | None = None
     name: ClassVar[str] = "UNDEFINED"
-    devices_status_handler: DevicesStatusesHandler
 
     def __init__(self, other_state: State = None) -> None:
         self._lock = threading.Lock()
-        self.devices_status_handler = DevicesStatusesHandler()
+
         if other_state:
             self._detected_codes = other_state.detected_codes
             self._detected_group_code = other_state._detected_group_code
             self._box_marker = other_state.box_marker
-            self.devices_status_handler = other_state.devices_status_handler
 
     def reset(self, box_marker: BoxMarker) -> None:
-        self.devices_status_handler = DevicesStatusesHandler()
         self._detected_codes = []
         self._detected_group_code = None
         self._box_marker = box_marker
@@ -60,15 +57,6 @@ class State:
 
     def do_job_once(self):
         pass
-
-    def handle_additional_devices_status(self, status):
-        with self._lock:
-            self.devices_status_handler.handle_status(status)
-            if self.devices_status_handler.is_error():
-                self._box_marker.set_state(ErrorState)
-            elif isinstance(self, ErrorState):
-                self.reset(self._box_marker)
-                self._box_marker.set_state(ReadyState)
 
 
 class ReadyState(State):
@@ -132,12 +120,14 @@ class BoxMarker(DeviceObserver):
     _state: State
     expected_bottles_number: int
     file_saver: FileSaver | None = None
+    _devices_status_handler: DevicesStatusesHandler
 
     def __init__(self, file_saver: FileSaver, expected_bottles_number: int) -> None:
         self.expected_bottles_number = expected_bottles_number
         self._file_saver = file_saver
         self._state = ReadyState()
         self.reset()
+        self._devices_status_handler = DevicesStatusesHandler()
 
     def __del__(self):
         self.set_state(ReadyState)
@@ -150,14 +140,18 @@ class BoxMarker(DeviceObserver):
         if not isinstance(self._state, state):
             if not isinstance(self._state, ErrorState):
                 self._state = state(self._state)
-            elif not self._state.devices_status_handler.is_error():
+            elif not self._devices_status_handler.is_error():
                 self._state = state(self._state)
         if self._state != previous_state:
             logging.info(f"State changed from {previous_state.name} to {self._state.name}")
             self._state.do_job_once()
 
-    def update_devices(self, value):
-        self._state.handle_additional_devices_status(value)
+    def update_devices(self, status):
+        self._devices_status_handler.handle_status(status)
+        if self._devices_status_handler.is_error():
+            self.set_state(ErrorState)
+        elif isinstance(self._state, ErrorState):
+            self.reset()
 
     async def process_detected_codes(self, codes: List) -> None:
         self._state.process_detected_codes(codes)
@@ -171,7 +165,7 @@ class BoxMarker(DeviceObserver):
         return self._state.name
 
     async def get_devices_status(self) -> dict:
-        return self._state.devices_status_handler.get_statuses()
+        return self._devices_status_handler.get_statuses()
 
     async def get_status(self) -> str:
         if isinstance(self._state, ErrorState):
