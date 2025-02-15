@@ -13,27 +13,27 @@ class FileSaver(StatusObservable):
         self.results_dir = result_dir
         try:
             os.makedirs(self.results_dir, exist_ok=True)
-            logging.info(f"File saver initialized with saving directory: {result_dir}")
+            logging.info(f"Директория для сохранения файлов: {result_dir}")
             self.status = FileSaverStatus.READY
             self.notify()
         except Exception as e:
-            logging.error(f"Failed to create directory {result_dir}: {e}")
+            logging.error(f"Невозможно создать директорию для сохранения файлов {result_dir}: {e}")
             self.status = FileSaverStatus.FOLDER_CREATION_FAILED
             self.notify()
 
     def save_file(self, file_path: str, content: str) -> int:
         if self.status != FileSaverStatus.READY:
-            logging.error("File saver is not ready")
+            logging.error("Хранитель файлов не готов")
             return -1
-        logging.info(f"Saving file {file_path}...")
+        logging.info(f"Сохраняю файл {file_path}...")
         self.status = FileSaverStatus.SAVING
         try:
             with open(os.path.join(self.results_dir, file_path), 'w') as file:
                 file.write(content)
-                logging.info(f"File {file_path} saved")
+                logging.info(f"Файл {file_path} успешно сохранён")
                 self.status = FileSaverStatus.READY
         except Exception as e:
-            logging.error(f"Failed to save file: {e}")
+            logging.error(f"Ошибка сохранения файла: {e}")
             self.status = FileSaverStatus.SAVING_FAILED
             return -1
         self.notify()

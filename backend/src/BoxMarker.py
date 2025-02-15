@@ -16,7 +16,7 @@ class State:
     _box_marker: BoxMarker | None = None
     _detected_codes: List[str] = []
     _detected_group_code: str | None = None
-    name: ClassVar[str] = "UNDEFINED"
+    name: ClassVar[str] = "НЕОПРЕДЕЛЕНО"
 
     def __init__(self, other_state: State = None) -> None:
         self._lock = threading.Lock()
@@ -50,7 +50,7 @@ class State:
     def process_detected_codes(self, codes: List[str]) -> None:
         with self._lock:
             self._process_detected_codes(codes)
-            logging.info(f"STATE {self.name}\t{len(codes):2d}/{len(self._detected_codes):2d}")
+            logging.info(f"СОСТОЯНИЕ: {self.name}\t ПРОЧИТАНО: {len(codes):2d}\t НАКОПЛЕНО: {len(self._detected_codes):2d}")
 
     def _process_detected_codes(self, codes: List[str]) -> None:
         pass
@@ -60,7 +60,7 @@ class State:
 
 
 class ReadyState(State):
-    name = "READY"
+    name = "ГОТОВ"
 
     def do_job_once(self):
         self._detected_codes = []
@@ -76,7 +76,7 @@ class ReadyState(State):
 
 
 class CollectingCodesState(State):
-    name = "COLLECTING_CODES"
+    name = "РАСПОЗНАЮ КОДЫ С БУТЫЛОК"
 
     def _process_detected_codes(self, codes):
         union_codes = set(self._detected_codes).union(set(codes))
@@ -90,11 +90,11 @@ class CollectingCodesState(State):
 
 
 class TooMuchCodesState(ReadyState):
-    name = "TOO_MUCH_CODES"
+    name = "СЛИШКОМ МНОГО КОДОВ В КАДРЕ"
 
 
 class CollectSingleGroupCode(State):
-    name = "DETECTING_GROUP_CODE"
+    name = "РАСПОЗНАЮ КОД АГГРЕГАЦИИ"
 
     def _process_detected_codes(self, codes):
         if len(codes) == 1 and codes[0] not in self._detected_codes:
@@ -103,17 +103,17 @@ class CollectSingleGroupCode(State):
 
 
 class CreateAndPublishXML(State):
-    name = "CREATE_AND_PUBLISH_XML"
+    name = "СОЗДАЮ И СОХРАНЯЮ XML"
 
     def do_job_once(self):
-        logging.info("Creating and publishing XML")
+        logging.info(f"Создаю и сохраняю XML файл {self._detected_group_code}.xml")
         xml_file = generate_xml(self._detected_codes, self._detected_group_code)
         self._box_marker.publish_xml(xml_file, f"{self._detected_group_code}.xml")
         self._box_marker.set_state(ReadyState)
 
 
 class ErrorState(State):
-    name = "ERROR"
+    name = "ОШИБКА"
 
 
 class BoxMarker(DeviceObserver):
@@ -143,7 +143,7 @@ class BoxMarker(DeviceObserver):
             elif not self._devices_status_handler.is_error():
                 self._state = state(self._state)
         if self._state != previous_state:
-            logging.info(f"State changed from {previous_state.name} to {self._state.name}")
+            logging.info(f"Переход состояния `{previous_state.name}` -> `{self._state.name}`")
             self._state.do_job_once()
 
     def update_devices(self, status):
@@ -157,7 +157,6 @@ class BoxMarker(DeviceObserver):
         self._state.process_detected_codes(codes)
 
     def publish_xml(self, xml_file_content: str, filename: str):
-        logging.info(f"Publishing XML file {filename}")
         if self._file_saver:
             self._file_saver.save_file(filename, xml_file_content)
 
@@ -169,9 +168,9 @@ class BoxMarker(DeviceObserver):
 
     async def get_status(self) -> str:
         if isinstance(self._state, ErrorState):
-            return "ERROR"
+            return "ОШИБКА"
         elif isinstance(self._state, TooMuchCodesState):
-            return "WARNING"
+            return "ПРЕДУПРЕЖДЕНИЕ"
         else:
             return "OK"
 
