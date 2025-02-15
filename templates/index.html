@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DataMatrix Decoder Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .container { width: 80%; margin: 0 auto; }
+        h1 { text-align: center; }
+        pre { background: #f4f4f4; padding: 10px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>DataMatrix Decoder Dashboard</h1>
+        <h2>Status</h2>
+        <pre id="status"></pre>
+        <h2>Devices Status</h2>
+        <pre id="devices_status"></pre>
+        <h2>Current State</h2>
+        <pre id="state"></pre>
+        <h2>Detected Codes</h2>
+        <pre id="detected_codes"></pre>
+        <h2>Results</h2>
+        <ul id="file_list"></ul>
+    </div>
+    <script>
+        async function fetchJsonData(url, elementId) {
+            const response = await fetch(url);
+            const data = await response.json();
+            document.getElementById(elementId).innerText = JSON.stringify(data, null, 2);
+        }
+
+        async function fetchFileList() {
+            const response = await fetch('/files');
+            const files = await response.json();
+            const fileListElement = document.getElementById('file_list');
+            fileListElement.innerHTML = '';
+            files.forEach(file => {
+                const listItem = document.createElement('li');
+                const link = document.createElement('a');
+                link.href = `/files/${file}`;
+                link.innerText = file;
+                listItem.appendChild(link);
+                fileListElement.appendChild(listItem);
+            });
+        }
+
+        function updateData() {
+            fetchJsonData('/status', 'status');
+            fetchJsonData('/devices_status', 'devices_status');
+            fetchJsonData('/state', 'state');
+            fetchJsonData('/detected_codes', 'detected_codes');
+            fetchFileList();
+        }
+
+        setInterval(updateData, 500);
+        updateData();
+    </script>
+</body>
+</html>
