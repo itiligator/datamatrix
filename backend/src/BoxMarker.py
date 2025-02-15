@@ -50,6 +50,8 @@ class State:
     def process_detected_codes(self, codes: List[str]) -> None:
         with self._lock:
             logging.info(f"Состояние: {self.name}.\tПрочитано кодов в кадре: {len(codes):2d}")
+            for code in codes:
+                logging.info(code[-7:-1])
             self._process_detected_codes(codes)
 
     def _process_detected_codes(self, codes: List[str]) -> None:
@@ -82,6 +84,8 @@ class CollectingCodesState(State):
         union_codes = set(self._detected_codes).union(set(codes))
         logging.info(
             f"Состояние: {self.name}.\tНакоплено: {len(union_codes):2d}/{self.box_marker.expected_bottles_number}")
+        for code in union_codes:
+            logging.info(code[-7:-1])
         if len(union_codes) < self._box_marker.expected_bottles_number:
             self._box_marker.set_state(ReadyState)
         elif len(union_codes) > self._box_marker.expected_bottles_number:
@@ -101,6 +105,8 @@ class CollectSingleGroupCode(State):
     def _process_detected_codes(self, codes):
         new_codes = [code for code in codes if not code in self.detected_codes]
         logging.info(f"Состояние: {self.name}.\tНовых кодов: {len(new_codes):2d}")
+        for code in new_codes:
+            logging.info(code[-7:-1])
         if len(new_codes) == 1:
             self._detected_group_code = codes[0]
             self.box_marker.set_state(CreateAndPublishXML)
