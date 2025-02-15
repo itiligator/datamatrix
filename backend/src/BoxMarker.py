@@ -49,8 +49,8 @@ class State:
 
     def process_detected_codes(self, codes: List[str]) -> None:
         with self._lock:
+            logging.info(f"Состояние: {self.name}.\tПрочитано кодов в кадре: {len(codes):2d}")
             self._process_detected_codes(codes)
-            logging.info(f"СОСТОЯНИЕ: {self.name}\t ПРОЧИТАНО: {len(codes):2d}\t НАКОПЛЕНО: {len(self._detected_codes):2d}")
 
     def _process_detected_codes(self, codes: List[str]) -> None:
         pass
@@ -80,6 +80,8 @@ class CollectingCodesState(State):
 
     def _process_detected_codes(self, codes):
         union_codes = set(self._detected_codes).union(set(codes))
+        logging.info(
+            f"Состояние: {self.name}.\tНакоплено: {len(union_codes):2d}/{self.box_marker.expected_bottles_number}")
         if len(union_codes) < self._box_marker.expected_bottles_number:
             self._box_marker.set_state(ReadyState)
         elif len(union_codes) > self._box_marker.expected_bottles_number:
@@ -97,9 +99,13 @@ class CollectSingleGroupCode(State):
     name = "РАСПОЗНАЮ КОД АГГРЕГАЦИИ"
 
     def _process_detected_codes(self, codes):
-        if len(codes) == 1 and codes[0] not in self._detected_codes:
+        new_codes = [code for code in codes if not code in self.detected_codes]
+        logging.info(f"Состояние: {self.name}.\tНовых кодов: {len(new_codes):2d}")
+        if len(new_codes) == 1:
             self._detected_group_code = codes[0]
             self.box_marker.set_state(CreateAndPublishXML)
+        elif len(new_codes) > 1:
+            self.box_marker.set_state(TooMuchCodesState)
 
 
 class CreateAndPublishXML(State):
@@ -136,15 +142,14 @@ class BoxMarker(DeviceObserver):
     def set_state(self, state: type[State]):
         if not issubclass(state, State):
             raise ValueError("State must be a subclass of State")
-        previous_state = self._state
         if not isinstance(self._state, state):
+            logging.info(f"Запланирован переход состояния `{self._state.name}` -> `{state.name}`")
             if not isinstance(self._state, ErrorState):
                 self._state = state(self._state)
             elif not self._devices_status_handler.is_error():
                 self._state = state(self._state)
-        if self._state != previous_state:
-            logging.info(f"Переход состояния `{previous_state.name}` -> `{self._state.name}`")
             self._state.do_job_once()
+            logging.info(f"Выполнен переход в состояние {self._state.name}")
 
     def update_devices(self, status):
         self._devices_status_handler.handle_status(status)

@@ -13,11 +13,11 @@ class FileSaver(StatusObservable):
         self.results_dir = result_dir
         try:
             os.makedirs(self.results_dir, exist_ok=True)
-            logging.info(f"Директория для сохранения файлов: {result_dir}")
+            logging.info(f"Внутренняя директория для сохранения файлов: {result_dir}")
             self.status = FileSaverStatus.READY
             self.notify()
         except Exception as e:
-            logging.error(f"Невозможно создать директорию для сохранения файлов {result_dir}: {e}")
+            logging.error(f"Невозможно создать внутреннюю директорию для сохранения файлов {result_dir}: {e}")
             self.status = FileSaverStatus.FOLDER_CREATION_FAILED
             self.notify()
 
