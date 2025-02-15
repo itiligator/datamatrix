@@ -147,11 +147,12 @@ class BoxMarker(DeviceObserver):
         if not issubclass(state, State):
             raise ValueError("State must be a subclass of State")
         if not isinstance(self._state, state):
+            previous_state = self._state
             if not isinstance(self._state, ErrorState):
                 self._state = state(self._state)
             elif not self._state.devices_status_handler.is_error():
                 self._state = state(self._state)
-            logging.info(f"State changed to {self._state.name}")
+            logging.info(f"State changed from {previous_state.name} to {self._state.name}")
         self._state.do_job_once()
 
     def update_devices(self, value):
