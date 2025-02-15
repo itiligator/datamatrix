@@ -92,7 +92,7 @@ class CollectingCodesState(State):
 
     def _process_detected_codes(self, codes):
         union_codes = set(self._detected_codes).union(set(codes))
-        if len(codes) == 0:
+        if len(union_codes) < self._box_marker.expected_bottles_number:
             self._box_marker.set_state(ReadyState)
         elif len(union_codes) > self._box_marker.expected_bottles_number:
             self._box_marker.set_state(TooMuchCodesState)
