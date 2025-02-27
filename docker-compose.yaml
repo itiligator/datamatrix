@@ -9,7 +9,6 @@ services:
     environment:
       - URL=${URL}
       - TIMEOUT=${TIMEOUT}
-      - SHRINK=${SHRINK}
       - EXPECTED_NUM=${EXPECTED_NUM}
       - LOG_LEVEL=${LOG_LEVEL}
       - HTTP_PORT=${HTTP_PORT}
@@ -21,7 +20,6 @@ services:
       python app.py
       --url ${URL}
       --timeout ${TIMEOUT}
-      --shrink ${SHRINK}
       --expected_num ${EXPECTED_NUM}
       --log_level ${LOG_LEVEL}
       --http_port ${HTTP_PORT}

@@ -15,12 +15,11 @@ from backend.src.status import DatamatrixDecoderStatus
 
 
 class DataMatrixDecoder(StatusObservable):
-    def __init__(self, url: str, max_count: int, timeout: int, shrink: int, callback):
+    def __init__(self, url: str, max_count: int, timeout: int, callback):
         super().__init__()
         self.url = url
         self.max_count = max_count
         self.timeout = timeout
-        self.shrink = shrink
         self.callback = callback
         self.queue = Queue()  # Limit queue size to prevent memory issues
         self.status = DatamatrixDecoderStatus.INIT
