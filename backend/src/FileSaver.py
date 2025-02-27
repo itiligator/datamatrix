@@ -6,18 +6,18 @@ from backend.src.StatusObservable import StatusObservable
 
 
 class FileSaver(StatusObservable):
-    def __init__(self, result_dir: str | None = 'upload'):
+    def __init__(self):
         super().__init__()
         self.status = FileSaverStatus.INIT
         self.notify()
-        self.results_dir = result_dir
+        self.results_dir = 'results'
         try:
             os.makedirs(self.results_dir, exist_ok=True)
-            logging.info(f"Внутренняя директория для сохранения файлов: {result_dir}")
+            logging.info(f"Внутренняя директория для сохранения файлов: {self.results_dir}")
             self.status = FileSaverStatus.READY
             self.notify()
         except Exception as e:
-            logging.error(f"Невозможно создать внутреннюю директорию для сохранения файлов {result_dir}: {e}")
+            logging.error(f"Невозможно создать внутреннюю директорию для сохранения файлов {self.results_dir}: {e}")
             self.status = FileSaverStatus.FOLDER_CREATION_FAILED
             self.notify()
 
