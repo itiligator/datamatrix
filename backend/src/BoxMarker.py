@@ -4,6 +4,7 @@ import threading
 import logging
 
 from backend.src.Codes2XML import generate_xml
+from backend.src.DatabaseManager import DatabaseManager
 from backend.src.StatusObservable import DeviceObserver
 from backend.src.status import DevicesStatusesHandler
 
@@ -71,6 +72,13 @@ class ReadyState(State):
     def _process_detected_codes(self, codes):
         if 0 < len(codes) <= self._box_marker.expected_bottles_number:
             self._detected_codes = codes
+            
+            # Check for duplicate codes in the database
+            duplicates_exist = any(self._box_marker.db_manager.is_individual_code_exists(code) for code in codes)
+            if duplicates_exist:
+                self._box_marker.set_state(DuplicateCodeError)
+                return
+                
             self._box_marker.set_state(CollectingCodesState)
         elif len(codes) > self._box_marker.expected_bottles_number:
             self._detected_codes = []
@@ -91,7 +99,12 @@ class CollectingCodesState(State):
         elif len(union_codes) > self._box_marker.expected_bottles_number:
             self._box_marker.set_state(TooMuchCodesState)
         elif len(union_codes) == self._box_marker.expected_bottles_number:
+            # Check for duplicate codes in the database
+            duplicates_exist = any(self._box_marker.db_manager.is_individual_code_exists(code) for code in union_codes)
             self._detected_codes = list(union_codes)
+            if duplicates_exist:
+                self._box_marker.set_state(DuplicateCodeError)
+                return
             self._box_marker.set_state(CollectSingleGroupCode)
 
 
@@ -109,6 +122,13 @@ class CollectSingleGroupCode(State):
             logging.info(code[-7:-1])
         if len(new_codes) == 1:
             self._detected_group_code = codes[0]
+            
+            # Check if the group code already exists in the database
+            if self._box_marker.db_manager.is_group_code_exists(self._detected_group_code):
+                self._box_marker.set_state(DuplicateCodeError)
+                return
+                
+            # Proceed to create XML
             self.box_marker.set_state(CreateAndPublishXML)
         elif len(new_codes) > 1:
             self.box_marker.set_state(TooMuchCodesState)
@@ -120,6 +140,7 @@ class CreateAndPublishXML(State):
     def do_job_once(self):
         logging.info(f"Создаю и сохраняю XML файл {self._detected_group_code}.xml")
         xml_file = generate_xml(self._detected_codes, self._detected_group_code)
+        self._box_marker.db_manager.save_codes(self._detected_codes, self._detected_group_code)
         self._box_marker.publish_xml(xml_file, f"{self._detected_group_code}.xml")
         self._box_marker.set_state(ReadyState)
 
@@ -128,15 +149,27 @@ class ErrorState(State):
     name = "ОШИБКА"
 
 
+class DuplicateCodeError(State):
+    name = "ОШИБКА: ДУБЛИРУЮЩИЙСЯ КОД"
+
+    def _process_detected_codes(self, codes: List[str]) -> None:
+        # if there is no logner duplicate codes, return to the Ready state
+        if not any(self._box_marker.db_manager.is_individual_code_exists(code) for code in codes) and \
+              not  any(self._box_marker.db_manager.is_group_code_exists(code) for code in codes):
+            self._box_marker.set_state(ReadyState)
+
+
 class BoxMarker(DeviceObserver):
     _state: State
     expected_bottles_number: int
     file_saver: FileSaver | None = None
     _devices_status_handler: DevicesStatusesHandler
+    db_manager: DatabaseManager
 
     def __init__(self, file_saver: FileSaver, expected_bottles_number: int) -> None:
         self.expected_bottles_number = expected_bottles_number
         self._file_saver = file_saver
+        self.db_manager = DatabaseManager()
         self._state = ReadyState()
         self.reset()
         self._devices_status_handler = DevicesStatusesHandler()
@@ -180,6 +213,8 @@ class BoxMarker(DeviceObserver):
     async def get_status(self) -> str:
         if isinstance(self._state, ErrorState):
             return "ОШИБКА"
+        elif isinstance(self._state, DuplicateCodeError):
+            return "ОШИБКА ДУБЛИРОВАНИЯ"
         elif isinstance(self._state, TooMuchCodesState):
             return "ПРЕДУПРЕЖДЕНИЕ"
         else:
