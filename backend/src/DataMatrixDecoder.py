@@ -7,7 +7,7 @@ import requests
 import asyncio
 import logging
 
-from pylibdmtx import pylibdmtx
+from .pylibdmtx import pylibdmtx
 from requests.auth import HTTPDigestAuth
 
 from backend.src.StatusObservable import StatusObservable
@@ -72,7 +72,7 @@ class DataMatrixDecoder(StatusObservable):
                 self.status = DatamatrixDecoderStatus.DECODING
                 self.notify()
                 decoded_messages = self.decode_datamatrix(image)
-                codes = [base64.b64encode(msg.data).decode('utf-8') for msg in decoded_messages]
+                codes = [base64.b64encode(msg[0].data).decode('utf-8') for msg in decoded_messages]
                 await self.callback(codes)
                 await asyncio.sleep(0.01)
                 self.queue.task_done()
@@ -83,8 +83,7 @@ class DataMatrixDecoder(StatusObservable):
                 await asyncio.sleep(0.1)
 
     def decode_datamatrix(self, image):
-        # TODO: make it configurable
-        return pylibdmtx.decode(image, timeout=self.timeout, max_count=self.max_count, max_edge=200)
+        return pylibdmtx.decode_with_regions(image, timeout=self.timeout, max_count=self.max_count, max_edge=200)
 
     async def run(self):
         """Start both producer and consumer coroutines"""
