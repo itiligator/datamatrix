@@ -79,7 +79,7 @@ class DataMatrixDecoder(StatusObservable):
                     for i in range(4):
                         coords += ((region[1][i][0], image_size[0] - region[1][i][1]),)
                     cv2.polylines(image, [np.array(coords)], True, (0, 255, 0), max(image_size)//100)
-                    cv2.imwrite('region.jpg', cv2.resize(image, (image_size[1]//3, image_size[0]//3), interpolation=cv2.INTER_AREA), [int(cv2.IMWRITE_JPEG_QUALITY), 50])
+                cv2.imwrite('region.jpg', cv2.resize(image, (image_size[1]//3, image_size[0]//3), interpolation=cv2.INTER_AREA), [int(cv2.IMWRITE_JPEG_QUALITY), 50])
                 await self.callback(codes)
                 await asyncio.sleep(0.01)
                 self.queue.task_done()
