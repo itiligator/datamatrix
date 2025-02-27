@@ -55,6 +55,8 @@ class DataMatrixDecoder(StatusObservable):
                     self.notify()
                     await self.queue.put(image)
                     await asyncio.sleep(0.01)
+                else:
+                    await asyncio.sleep(1.0)
             except Exception as e:
                 logging.error(f"Ошибка получения картинки: {e}")
                 self.status = DatamatrixDecoderStatus.GENERAL_FAILURE
