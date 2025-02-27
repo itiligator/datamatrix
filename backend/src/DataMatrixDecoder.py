@@ -8,7 +8,6 @@ import asyncio
 import logging
 
 from pylibdmtx import pylibdmtx
-from pylibdmtx.wrapper import DmtxSymbolSize
 from requests.auth import HTTPDigestAuth
 
 from backend.src.StatusObservable import StatusObservable
@@ -84,9 +83,7 @@ class DataMatrixDecoder(StatusObservable):
 
     def decode_datamatrix(self, image):
         # TODO: make it configurable
-        return pylibdmtx.decode(image, timeout=self.timeout, max_count=self.max_count,
-                                shape=DmtxSymbolSize.DmtxSymbol22x22, deviation=5, threshold=40, min_edge=95,
-                                max_edge=125)
+        return pylibdmtx.decode(image, timeout=self.timeout, max_count=self.max_count, max_edge=200)
 
     async def run(self):
         """Start both producer and consumer coroutines"""

@@ -17,12 +17,12 @@ box_marker: BoxMarker | None = None
 http_port: int = 8001
 
 
-async def run_marker(url: str, timeout: int, shrink: int, expected_num: int):
+async def run_marker(url: str, timeout: int, expected_num: int):
     global box_marker
     file_saver = FileSaver()
     box_marker = BoxMarker(file_saver, expected_num)
     file_saver.subscribe(box_marker)
-    decoder = DataMatrixDecoder(url=url, max_count=expected_num, timeout=timeout, shrink=shrink,
+    decoder = DataMatrixDecoder(url=url, max_count=expected_num, timeout=timeout,
                                 callback=box_marker.process_detected_codes)
     decoder.subscribe(box_marker)
     await decoder.run()
@@ -76,8 +76,6 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Запуск приложения с параметрами.')
     parser.add_argument('--url', type=str, required=True, help='URL для получения изображения')
     parser.add_argument('--timeout', type=int, required=False, default=2, help='Таймаут для декодирования DataMatrix')
-    parser.add_argument('--shrink', type=int, required=False, default=2,
-                        help='Шаг пропуска пискселей для уменьшения изображения для декодирования DataMatrix')
     parser.add_argument('--expected_num', type=int, required=True, help='Ожидаемое количество бутылок')
     parser.add_argument('--http_port', type=str, required=False, default=8001, help='Порт для запуска бэка')
     parser.add_argument('--log_level', type=str, choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
@@ -101,7 +99,7 @@ def main():
     flask_thread.start()
 
     asyncio.run(
-        run_marker(url=args.url, timeout=args.timeout * 1000, shrink=args.shrink, expected_num=args.expected_num))
+        run_marker(url=args.url, timeout=args.timeout * 1000, expected_num=args.expected_num))
 
 
 if __name__ == "__main__":
