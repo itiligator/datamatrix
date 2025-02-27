@@ -17,6 +17,10 @@
         <pre id="status"></pre>
         <h2>Devices Status</h2>
         <pre id="devices_status"></pre>
+        <h2>Camera View</h2>
+        <div>
+            <img id="region_image" src="/region_image" alt="Region Image" style="max-width: 100%; border: 1px solid #ddd;">
+        </div>
         <h2>Current State</h2>
         <pre id="state"></pre>
         <h2>Detected Codes</h2>
@@ -46,6 +50,11 @@
             });
         }
 
+        function updateImage() {
+            const img = document.getElementById('region_image');
+            img.src = '/region_image?t=' + new Date().getTime();
+        }
+
         function updateData() {
             fetchJsonData('/status', 'status');
             fetchJsonData('/devices_status', 'devices_status');
@@ -54,6 +63,7 @@
             fetchFileList();
         }
 
+        setInterval(updateImage, 500);
         setInterval(updateData, 500);
         updateData();
     </script>

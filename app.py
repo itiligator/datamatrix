@@ -33,6 +33,11 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/region_image')
+def get_region_image():
+    return send_file('region.jpg', mimetype='image/jpeg')
+
+
 @app.route('/status')
 async def get_status():
     status = await box_marker.get_status()
