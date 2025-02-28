@@ -14,8 +14,8 @@ services:
       - HTTP_PORT=${HTTP_PORT}
       - RESULTS_DIR=${RESULTS_DIR}
     ports:
-      - "8000:8000"
-    network_mode: "host"
+      - "${HTTP_PORT}:${HTTP_PORT}"
+#    network_mode: "host"
     command: >
       python app.py
       --url ${URL}
