@@ -89,13 +89,16 @@ class CollectingCodesState(State):
     name = "РАСПОЗНАЮ КОДЫ С БУТЫЛОК"
 
     def _process_detected_codes(self, codes):
+        if len(codes) == 0:
+            logging.info(f"Распознал ноль кодов, возврат на исходную")
+            self._box_marker.set_state(ReadyState)
         union_codes = set(self._detected_codes).union(set(codes))
         logging.info(
             f"Состояние: {self.name}.\tНакоплено: {len(union_codes):2d}/{self.box_marker.expected_bottles_number}")
         for code in union_codes:
             logging.info(code[-7:-1])
         if len(union_codes) < self._box_marker.expected_bottles_number:
-            self._box_marker.set_state(ReadyState)
+            self._detected_codes = list(union_codes)
         elif len(union_codes) > self._box_marker.expected_bottles_number:
             self._box_marker.set_state(TooMuchCodesState)
         elif len(union_codes) == self._box_marker.expected_bottles_number:
