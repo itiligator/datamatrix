@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 import threading
 import logging
 
@@ -145,9 +146,15 @@ class CreateAndPublishXML(State):
         logging.info(f"Создаю и сохраняю XML файл {self._detected_group_code}.xml")
         xml_file = generate_xml(self._detected_codes, self._detected_group_code)
         csv_file = generate_csv(self._detected_codes, self._detected_group_code)
-        self._box_marker.db_manager.save_codes(self._detected_codes, self._detected_group_code)
-        self._box_marker.write_file(xml_file, f"{self._detected_group_code}.xml", 'xml')
-        self._box_marker.write_file(csv_file, f"{self._detected_group_code}.csv", 'csv')
+        seq = self._box_marker.db_manager.save_codes(self._detected_codes, self._detected_group_code)
+        if seq == -1:
+            self._box_marker.set_state(ErrorState)
+            return
+        logging.info(f"Сохранено {len(self._detected_codes)} индивидуальных кодов и 1 групповой код в базу данных. Номер последовательности: {seq}")
+        current_day = datetime.today().strftime('%d%m%Y')
+        filename = f"{seq:04d}_{current_day}.xml"
+        self._box_marker.write_file(xml_file, f"{filename}.xml", 'xml')
+        self._box_marker.write_file(csv_file, f"{filename}.csv", 'csv')
         self._box_marker.set_state(ReadyState)
 
 
