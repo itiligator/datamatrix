@@ -21,13 +21,16 @@ class FileSaver(StatusObservable):
             self.status = FileSaverStatus.FOLDER_CREATION_FAILED
             self.notify()
 
-    def save_file(self, file_path: str, content: str) -> int:
+    def save_file(self, file_path: str, content: str, subdir: str | None = None) -> int:
         if self.status != FileSaverStatus.READY:
             logging.error("Хранитель файлов не готов")
             return -1
         logging.info(f"Сохраняю файл {file_path}...")
         self.status = FileSaverStatus.SAVING
         try:
+            if subdir:
+                os.makedirs(os.path.join(self.results_dir, subdir), exist_ok=True)
+                file_path = os.path.join(subdir, file_path)
             with open(os.path.join(self.results_dir, file_path), 'w') as file:
                 file.write(content)
                 logging.info(f"Файл {file_path} успешно сохранён")

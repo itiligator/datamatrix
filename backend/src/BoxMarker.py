@@ -4,6 +4,7 @@ import threading
 import logging
 
 from backend.src.Codes2XML import generate_xml
+from backend.src.Codes2TXT import generate_csv
 from backend.src.DatabaseManager import DatabaseManager
 from backend.src.StatusObservable import DeviceObserver
 from backend.src.status import DevicesStatusesHandler
@@ -143,8 +144,10 @@ class CreateAndPublishXML(State):
     def do_job_once(self):
         logging.info(f"Создаю и сохраняю XML файл {self._detected_group_code}.xml")
         xml_file = generate_xml(self._detected_codes, self._detected_group_code)
+        csv_file = generate_csv(self._detected_codes, self._detected_group_code)
         self._box_marker.db_manager.save_codes(self._detected_codes, self._detected_group_code)
-        self._box_marker.publish_xml(xml_file, f"{self._detected_group_code}.xml")
+        self._box_marker.write_file(xml_file, f"{self._detected_group_code}.xml", 'xml')
+        self._box_marker.write_file(csv_file, f"{self._detected_group_code}.csv", 'csv')
         self._box_marker.set_state(ReadyState)
 
 
@@ -156,7 +159,7 @@ class DuplicateCodeError(State):
     name = "ОШИБКА: ДУБЛИРУЮЩИЙСЯ КОД"
 
     def _process_detected_codes(self, codes: List[str]) -> None:
-        # if there is no logner duplicate codes, return to the Ready state
+        # if there is no longer duplicate codes, return to the Ready state
         if not any(self._box_marker.db_manager.is_individual_code_exists(code) for code in codes) and \
               not  any(self._box_marker.db_manager.is_group_code_exists(code) for code in codes):
             self._box_marker.set_state(ReadyState)
@@ -203,9 +206,9 @@ class BoxMarker(DeviceObserver):
     async def process_detected_codes(self, codes: List) -> None:
         self._state.process_detected_codes(codes)
 
-    def publish_xml(self, xml_file_content: str, filename: str):
+    def write_file(self, xml_file_content: str, filename: str, subdir: str | None = None) -> None:
         if self._file_saver:
-            self._file_saver.save_file(filename, xml_file_content)
+            self._file_saver.save_file(filename, xml_file_content, subdir)
 
     async def get_state(self) -> str:
         return self._state.name
