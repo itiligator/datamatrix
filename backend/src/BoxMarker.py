@@ -51,8 +51,8 @@ class State:
     def process_detected_codes(self, codes: List[str]) -> None:
         with self._lock:
             logging.info(f"Состояние: {self.name}.\tПрочитано кодов в кадре: {len(codes):2d}")
-            for code in codes:
-                logging.info(code[-7:-1])
+            # for code in codes:
+            #     logging.info(code[-7:-1])
             self._process_detected_codes(codes)
 
     def _process_detected_codes(self, codes: List[str]) -> None:
@@ -116,7 +116,7 @@ class TooMuchCodesState(ReadyState):
 
 
 class CollectSingleGroupCode(State):
-    name = "РАСПОЗНАЮ КОД АГГРЕГАЦИИ"
+    name = "РАСПОЗНАЮ КОД АГРЕГАЦИИ"
 
     def _process_detected_codes(self, codes):
         new_codes = [code for code in codes if not code in self.detected_codes]
