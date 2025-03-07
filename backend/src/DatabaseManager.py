@@ -1,6 +1,7 @@
 import logging
 import os
 import sqlite3
+import datetime
 from typing import List
 
 
@@ -87,7 +88,7 @@ class DatabaseManager:
             logging.error(f"Error checking group code: {e}")
             return False
 
-    def save_codes(self, individual_codes: List[str], group_code: str) -> bool:
+    def save_codes(self, individual_codes: List[str], group_code: str) -> int:
         """Save individual codes and group code to the database with their relationship."""
         try:
             # Begin transaction
@@ -107,14 +108,30 @@ class DatabaseManager:
                     (group_code_id, individual_code_id)
                 )
 
+            # Get the current date
+            current_date = datetime.date.today()
+
+            # Check if the current date exists in the daily_sequence table
+            self.cursor.execute("SELECT sequence FROM daily_sequence WHERE date = ?", (current_date,))
+            result = self.cursor.fetchone()
+
+            if result is None:
+                # If the current date does not exist in the daily_sequence table, insert a new record with the current date and sequence number 1
+                self.cursor.execute("INSERT INTO daily_sequence (date, sequence) VALUES (?, 1)", (current_date,))
+                sequence_number = 1
+            else:
+                # If the current date exists in the daily_sequence table, increment the sequence number by 1
+                sequence_number = result[0] + 1
+                self.cursor.execute("UPDATE daily_sequence SET sequence = ? WHERE date = ?", (sequence_number, current_date))
+
             # Commit transaction
             self.conn.commit()
             logging.info(f"Saved {len(individual_codes)} individual codes and 1 group code to database")
-            return True
+            return sequence_number
         except sqlite3.Error as e:
             logging.error(f"Error saving codes to database: {e}")
             self.conn.rollback()
-            return False
+            return -1
 
     def check_duplicate_codes(self, individual_codes: List[str]) -> List[str]:
         """Check if any individual codes already exist in the database and return the duplicates."""
