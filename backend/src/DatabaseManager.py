@@ -1,4 +1,5 @@
 import logging
+import os
 import sqlite3
 from typing import List
 
@@ -6,7 +7,8 @@ from typing import List
 class DatabaseManager:
     def __init__(self, db_path: str = 'codes_database.db'):
         """Initialize the database manager with the specified database path."""
-        self.db_path = db_path
+        os.makedirs(os.path.join('results', 'database'), exist_ok=True)
+        self.db_path = os.path.join('results', 'database', db_path)
         self.conn = None
         self.cursor = None
         self._initialize_database()
