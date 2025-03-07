@@ -6,12 +6,42 @@ import numpy
 import httpx
 import asyncio
 import logging
+import logging.config
 
 from .pylibdmtx import pylibdmtx
 from httpx import DigestAuth
 
 from backend.src.StatusObservable import StatusObservable
 from backend.src.status import DatamatrixDecoderStatus
+LOGGING_CONFIG = {
+    "version": 1,
+    "handlers": {
+        "default": {
+            "class": "logging.StreamHandler",
+            "formatter": "http",
+            "stream": "ext://sys.stderr"
+        }
+    },
+    "formatters": {
+        "http": {
+            "format": "%(levelname)s [%(asctime)s] %(name)s - %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        }
+    },
+    'loggers': {
+        'httpx': {
+            'handlers': ['default'],
+            'level': 'ERROR',
+        },
+        'httpcore': {
+            'handlers': ['default'],
+            'level': 'ERROR',
+        },
+    }
+}
+
+
+logging.config.dictConfig(LOGGING_CONFIG)
 
 
 class DataMatrixDecoder(StatusObservable):
@@ -25,11 +55,12 @@ class DataMatrixDecoder(StatusObservable):
         self.status = DatamatrixDecoderStatus.INIT
         self.notify()
         self.client = None
+        self.auth = DigestAuth('admin', 'salek2025')
 
     async def fetch_image(self):
         try:
             if self.client is None:
-                self.client = httpx.AsyncClient(auth=DigestAuth('admin', 'salek2025'))
+                self.client = httpx.AsyncClient(auth=self.auth)
             # TODO: make it configurable
             response = await self.client.get(self.url, timeout=1.0)
             response.raise_for_status()
@@ -50,26 +81,22 @@ class DataMatrixDecoder(StatusObservable):
                 if self.status != DatamatrixDecoderStatus.IMAGE_UNAVAILABLE:
                     self.status = DatamatrixDecoderStatus.FETCHING_IMAGE
                     self.notify()
-                await asyncio.sleep(0.01)
                 image = await self.fetch_image()
                 if image is not None:
                     self.status = DatamatrixDecoderStatus.OK
                     self.notify()
                     await self.queue.put(image)
-                    await asyncio.sleep(0.01)
                 else:
                     await asyncio.sleep(1.0)
             except Exception as e:
                 logging.error(f"Ошибка получения картинки: {e}")
                 self.status = DatamatrixDecoderStatus.GENERAL_FAILURE
                 self.notify()
-                await asyncio.sleep(0.1)
 
     async def image_consumer(self):
         """Process images from the queue"""
         while True:
             try:
-                await asyncio.sleep(0.01)
                 image = await self.queue.get()
                 self.status = DatamatrixDecoderStatus.DECODING
                 self.notify()
@@ -83,7 +110,6 @@ class DataMatrixDecoder(StatusObservable):
                     cv2.polylines(image, [numpy.array(coords)], True, (0, 255, 0), max(image_size)//100)
                 cv2.imwrite('region.jpg', cv2.resize(image, (image_size[1]//3, image_size[0]//3), interpolation=cv2.INTER_AREA), [int(cv2.IMWRITE_JPEG_QUALITY), 50])
                 await self.callback(codes)
-                await asyncio.sleep(0.01)
                 self.queue.task_done()
             except Exception as e:
                 logging.error(f"Ошибка распознавания кодов: {e}")
@@ -100,9 +126,8 @@ class DataMatrixDecoder(StatusObservable):
             try:
                 if self.client:
                     await self.client.aclose()
-                self.client = httpx.AsyncClient(auth=DigestAuth('admin', 'salek2025'))
+                self.client = httpx.AsyncClient(auth=self.auth)
                 await asyncio.gather(
-                    # self.image_producer(),
                     self.image_producer(),
                     self.image_consumer()
                 )
