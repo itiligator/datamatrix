@@ -2,13 +2,13 @@ import base64
 from asyncio import Queue
 
 import cv2
-import numpy as np
-import requests
+import numpy
+import httpx
 import asyncio
 import logging
 
 from .pylibdmtx import pylibdmtx
-from requests.auth import HTTPDigestAuth
+from httpx import DigestAuth
 
 from backend.src.StatusObservable import StatusObservable
 from backend.src.status import DatamatrixDecoderStatus
@@ -21,21 +21,23 @@ class DataMatrixDecoder(StatusObservable):
         self.max_count = max_count
         self.timeout = timeout
         self.callback = callback
-        self.queue = Queue()  # Limit queue size to prevent memory issues
+        self.queue = Queue()
         self.status = DatamatrixDecoderStatus.INIT
         self.notify()
-        self.session = requests.Session()
+        self.client = None
 
-    def fetch_image(self):
+    async def fetch_image(self):
         try:
+            if self.client is None:
+                self.client = httpx.AsyncClient(auth=DigestAuth('admin', 'salek2025'))
             # TODO: make it configurable
-            response = self.session.get(self.url, timeout=2, auth=HTTPDigestAuth('admin', 'salek2025'))
+            response = await self.client.get(self.url, timeout=1.0)
             response.raise_for_status()
-            image_array = np.asarray(bytearray(response.content), dtype=np.uint8)
+            image_array = numpy.asarray(bytearray(response.content), dtype=numpy.uint8)
             image = cv2.imdecode(image_array, cv2.IMREAD_UNCHANGED)
             self.status = DatamatrixDecoderStatus.OK
             return image
-        except (requests.RequestException, cv2.error) as e:
+        except (httpx.HTTPError, cv2.error) as e:
             logging.error(f"Кадр недоступен по сети: {e}")
             self.status = DatamatrixDecoderStatus.IMAGE_UNAVAILABLE
             self.notify()
@@ -49,7 +51,7 @@ class DataMatrixDecoder(StatusObservable):
                     self.status = DatamatrixDecoderStatus.FETCHING_IMAGE
                     self.notify()
                 await asyncio.sleep(0.01)
-                image = self.fetch_image()
+                image = await self.fetch_image()
                 if image is not None:
                     self.status = DatamatrixDecoderStatus.OK
                     self.notify()
@@ -78,7 +80,7 @@ class DataMatrixDecoder(StatusObservable):
                     coords = ()
                     for i in range(4):
                         coords += ((region[1][i][0], image_size[0] - region[1][i][1]),)
-                    cv2.polylines(image, [np.array(coords)], True, (0, 255, 0), max(image_size)//100)
+                    cv2.polylines(image, [numpy.array(coords)], True, (0, 255, 0), max(image_size)//100)
                 cv2.imwrite('region.jpg', cv2.resize(image, (image_size[1]//3, image_size[0]//3), interpolation=cv2.INTER_AREA), [int(cv2.IMWRITE_JPEG_QUALITY), 50])
                 await self.callback(codes)
                 await asyncio.sleep(0.01)
@@ -96,7 +98,11 @@ class DataMatrixDecoder(StatusObservable):
         """Start both producer and consumer coroutines"""
         while True:
             try:
+                if self.client:
+                    await self.client.aclose()
+                self.client = httpx.AsyncClient(auth=DigestAuth('admin', 'salek2025'))
                 await asyncio.gather(
+                    # self.image_producer(),
                     self.image_producer(),
                     self.image_consumer()
                 )
