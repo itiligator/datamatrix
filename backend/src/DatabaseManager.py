@@ -45,7 +45,15 @@ class DatabaseManager:
                     FOREIGN KEY (individual_code_id) REFERENCES individual_codes(id)
                 )
             ''')
-            
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS daily_sequence (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    date DATE NOT NULL UNIQUE,
+                    sequence INTEGER NOT NULL DEFAULT 0,
+                    FOREIGN KEY (group_code_id) REFERENCES group_codes(id)
+                )
+            ''')
+
             self.conn.commit()
             logging.info("Database initialized successfully")
         except sqlite3.Error as e:
@@ -84,22 +92,21 @@ class DatabaseManager:
         try:
             # Begin transaction
             self.conn.execute("BEGIN TRANSACTION")
-            
             # Insert group code
             self.cursor.execute("INSERT INTO group_codes (code) VALUES (?)", (group_code,))
             group_code_id = self.cursor.lastrowid
-            
+
             # Insert individual codes and create relationships
             for code in individual_codes:
                 self.cursor.execute("INSERT INTO individual_codes (code) VALUES (?)", (code,))
                 individual_code_id = self.cursor.lastrowid
-                
+
                 # Create relationship
                 self.cursor.execute(
                     "INSERT INTO code_relationships (group_code_id, individual_code_id) VALUES (?, ?)",
                     (group_code_id, individual_code_id)
                 )
-            
+
             # Commit transaction
             self.conn.commit()
             logging.info(f"Saved {len(individual_codes)} individual codes and 1 group code to database")
