@@ -49,6 +49,7 @@ class DatabaseManager:
             self.cursor.execute('''
                 CREATE TABLE IF NOT EXISTS daily_sequence (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    group_code_id INTEGER,
                     date DATE NOT NULL UNIQUE,
                     sequence INTEGER NOT NULL DEFAULT 0,
                     FOREIGN KEY (group_code_id) REFERENCES group_codes(id)
