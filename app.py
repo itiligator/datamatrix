@@ -4,6 +4,7 @@ import os
 import sys
 import argparse
 import threading
+from datetime import datetime
 
 from flask import Flask, jsonify, render_template, send_file
 from backend.src.BoxMarker import BoxMarker
@@ -98,13 +99,16 @@ def main():
     global http_port
     args = parse_args()
 
+    # also save logs to file with filename as current date and time in results folder
     logging.basicConfig(
         level=getattr(logging, args.log_level),
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.StreamHandler(sys.stdout)
+            logging.StreamHandler(sys.stdout),
+            logging.FileHandler(f"results/{datetime.now().strftime('%Y-%m-%d_%H.%M.%S')}.log")
         ]
     )
+
     http_port = args.http_port
     flask_thread = threading.Thread(target=start_flask)
     flask_thread.start()
