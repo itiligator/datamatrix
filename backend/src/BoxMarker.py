@@ -157,7 +157,7 @@ class CreateAndPublishXML(State):
         filename = f"{seq:04d}_{current_day}"
         self._box_marker.write_file(xml_file, f"{filename}.xml", 'xml')
         self._box_marker.write_file(csv_file, f"{filename}.csv", 'csv')
-        self._box_marker.set_state(ReadyState)
+        self._box_marker.set_state(WaitForNextBox)
 
 
 class ErrorState(State):
@@ -173,6 +173,12 @@ class DuplicateCodeError(State):
               not  any(self._box_marker.db_manager.is_group_code_exists(code) for code in codes):
             self._box_marker.set_state(ReadyState)
 
+class WaitForNextBox(State):
+    name = "ОЖИДАНИЕ СЛЕДУЮЩЕЙ КОРОБКИ"
+
+    def _process_detected_codes(self, codes: List[str]) -> None:
+        if len(codes) == 0:
+            self._box_marker.set_state(ReadyState)
 
 class BoxMarker(DeviceObserver):
     _state: State
