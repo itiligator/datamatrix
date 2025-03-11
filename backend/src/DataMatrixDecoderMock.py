@@ -50,7 +50,8 @@ class DataMatrixDecoderMock(StatusObservable):
                 self.notify()
                 await asyncio.sleep(0.2)
                 subset = []
-                if self.empty_codes_num < i <= self.total_codes_num:
+                # random choice between 0 and 1 with 1 probability of 0.7
+                if self.empty_codes_num < i <= self.total_codes_num and random.random() < 0.7:
                     subset = [f"{iteration}_agg_{current_time_string}"]
                 self.create_image(subset)
                 await self.callback(subset)
