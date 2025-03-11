@@ -165,7 +165,7 @@ class ErrorState(State):
 
 
 class DuplicateCodeError(State):
-    name = "ОШИБКА: ДУБЛИРУЮЩИЙСЯ КОД"
+    name = "ОШИБКА: РАНЕЕ УЧТЕННЫЙ КОД В КАДРЕ"
 
     def _process_detected_codes(self, codes: List[str]) -> None:
         # if there is no longer duplicate codes, return to the Ready state
