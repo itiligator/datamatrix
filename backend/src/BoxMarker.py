@@ -156,6 +156,10 @@ class CreateAndPublishXML(State):
         logging.info(
             f"Сохранено {len(self._detected_codes)} индивидуальных кодов и 1 групповой код в базу данных. "
             f"Номер последовательности: {seq}")
+        logging.info(f"Коды бутылок:")
+        for code in self._detected_codes:
+            logging.info(code)
+        logging.info(f"Код агрегации: {self._detected_group_code}")
         current_day = datetime.today().strftime('%d%m%Y')
         filename = f"{seq:04d}_{current_day}"
         logging.info(f"Создаю и сохраняю XML файл {filename}.xml")
