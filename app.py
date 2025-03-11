@@ -7,6 +7,7 @@ import threading
 
 from flask import Flask, jsonify, render_template, send_file
 from backend.src.BoxMarker import BoxMarker
+from backend.src.DataMatrixDecoderMock import DataMatrixDecoderMock
 from backend.src.FileSaver import FileSaver
 from backend.src.DataMatrixDecoder import DataMatrixDecoder
 
@@ -17,13 +18,17 @@ box_marker: BoxMarker | None = None
 http_port: int = 8001
 
 
-async def run_marker(url: str, timeout: int, expected_num: int):
+async def run_marker(url: str, timeout: int, expected_num: int, test: bool = False):
     global box_marker
     file_saver = FileSaver()
     box_marker = BoxMarker(file_saver, expected_num)
     file_saver.subscribe(box_marker)
-    decoder = DataMatrixDecoder(url=url, max_count=expected_num, timeout=timeout,
-                                callback=box_marker.process_detected_codes)
+    if not test:
+        decoder = DataMatrixDecoder(url=url, max_count=expected_num, timeout=timeout,
+                                    callback=box_marker.process_detected_codes)
+    else:
+        decoder = DataMatrixDecoderMock(url=url, max_count=expected_num, timeout=timeout,
+                                        callback=box_marker.process_detected_codes)
     decoder.subscribe(box_marker)
     await decoder.run()
 
@@ -85,6 +90,7 @@ def parse_args():
     parser.add_argument('--http_port', type=str, required=False, default=8001, help='Порт для запуска бэка')
     parser.add_argument('--log_level', type=str, choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                         default='INFO', help='Уровень логирования')
+    parser.add_argument('--test', action='store_true', help='Тестовый режим')
     return parser.parse_args()
 
 
@@ -104,7 +110,7 @@ def main():
     flask_thread.start()
 
     asyncio.run(
-        run_marker(url=args.url, timeout=args.timeout * 1000, expected_num=args.expected_num))
+        run_marker(url=args.url, timeout=args.timeout * 1000, expected_num=args.expected_num, test=args.test))
 
 
 if __name__ == "__main__":
