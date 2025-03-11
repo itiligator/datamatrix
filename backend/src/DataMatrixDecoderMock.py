@@ -16,8 +16,23 @@ class DataMatrixDecoderMock(StatusObservable):
         self.callback = callback
         self.status = DatamatrixDecoderStatus.INIT
         self.notify()
-        self.empty_codes_num = 4
-        self.total_codes_num = 10
+        self.empty_codes_num = 2
+        self.total_codes_num = 8
+        self.set_no_image_available_picture()
+        # wait for 1 second without asyncio
+        time.sleep(3)
+
+    @staticmethod
+    def set_no_image_available_picture():
+        # copy no_image_available.jpg to region.jpg
+        shutil.copyfile('no_image_available.jpg', 'region.jpg')
+
+    @staticmethod
+    def create_image(codes):
+        image = cv2.imread("no_image_available.jpg")
+        for idx, code in enumerate(codes):
+            cv2.putText(image, code, (10, 100 + idx * 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1)
+        cv2.imwrite('region.jpg', image)
 
     async def run(self):
         iteration = 0
