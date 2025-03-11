@@ -66,6 +66,10 @@
         <img :src="regionImageSrc" alt="Region Image" style="max-width: 100%; border: 1px solid #ddd;">
     </div>
 </div>
+<audio id="success-sound-1" src="/static/success1.mp3"></audio>
+<audio id="success-sound-2" src="/static/success2.mp3"></audio>
+<audio id="error-sound" src="/static/error.mp3"></audio>
+<audio id="warning-sound" src="/static/warning.mp3"></audio>
 <script>
     new Vue({
         el: '#app',
@@ -82,7 +86,11 @@
                 return await response.json();
             },
             async updateData() {
-                this.state = await this.fetchJsonData('/state');
+                const newState = await this.fetchJsonData('/state');
+                if (newState.code !== this.state.code) {
+                    this.handleStateChange(newState.code);
+                }
+                this.state = newState;
                 this.devicesStatus = await this.fetchJsonData('/devices_status');
                 this.detectedCodes = await this.fetchJsonData('/detected_codes');
                 this.collectedCodes = await this.fetchJsonData('/collected_codes');
@@ -127,6 +135,17 @@
                     return 'red';
                 } else {
                     return 'grey';
+                }
+            },
+            handleStateChange(newCode) {
+                if (newCode === 3) {
+                    document.getElementById('success-sound-1').play();
+                } else if (newCode === 4 || newCode === 5) {
+                    document.getElementById('success-sound-2').play();
+                } else if (newCode === -3) {
+                    document.getElementById('error-sound').play();
+                } else if (newCode === -1 || newCode === -2) {
+                    document.getElementById('warning-sound').play();
                 }
             }
         },
