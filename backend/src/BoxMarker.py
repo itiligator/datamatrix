@@ -77,6 +77,7 @@ class ReadyState(State):
             
             # Check for duplicate codes in the database
             duplicates_exist = any(self._box_marker.db_manager.is_individual_code_exists(code) for code in codes)
+            duplicates_exist |= any(self._box_marker.db_manager.is_group_code_exists(code) for code in codes)
             if duplicates_exist:
                 self._box_marker.set_state(DuplicateCodeError)
                 return
@@ -106,6 +107,7 @@ class CollectingCodesState(State):
         elif len(union_codes) == self._box_marker.expected_bottles_number:
             # Check for duplicate codes in the database
             duplicates_exist = any(self._box_marker.db_manager.is_individual_code_exists(code) for code in union_codes)
+            duplicates_exist |= any(self._box_marker.db_manager.is_group_code_exists(code) for code in union_codes)
             self._detected_codes = list(union_codes)
             if duplicates_exist:
                 self._box_marker.set_state(DuplicateCodeError)
