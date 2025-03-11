@@ -81,9 +81,11 @@ class ReadyState(State):
                 self._box_marker.set_state(DuplicateCodeError)
                 return
             self._box_marker.set_state(CollectingCodesState)
+            return
         elif len(codes) > self._box_marker.expected_bottles_number:
             self._detected_codes = []
             self._box_marker.set_state(TooMuchCodesState)
+            return
 
 
 class CollectingCodesState(State):
@@ -93,6 +95,7 @@ class CollectingCodesState(State):
         if len(codes) == 0:
             logging.info(f"Распознал ноль кодов, возврат на исходную")
             self._box_marker.set_state(ReadyState)
+            return
         union_codes = set(self._detected_codes).union(set(codes))
         logging.info(
             f"Состояние: {self.name}.\tНакоплено: {len(union_codes):2d}/{self.box_marker.expected_bottles_number}")
@@ -102,6 +105,7 @@ class CollectingCodesState(State):
             self._detected_codes = list(union_codes)
         elif len(union_codes) > self._box_marker.expected_bottles_number:
             self._box_marker.set_state(TooMuchCodesState)
+            return
         elif len(union_codes) == self._box_marker.expected_bottles_number:
             # Check for duplicate codes in the database
             duplicates_exist = any(self._box_marker.db_manager.is_individual_code_exists(code) for code in union_codes)
@@ -111,6 +115,7 @@ class CollectingCodesState(State):
                 self._box_marker.set_state(DuplicateCodeError)
                 return
             self._box_marker.set_state(CollectSingleGroupCode)
+            return
 
 
 class TooMuchCodesState(ReadyState):
@@ -133,8 +138,10 @@ class CollectSingleGroupCode(State):
                 return
             # Proceed to create XML
             self.box_marker.set_state(CreateAndPublishXML)
+            return
         elif len(new_codes) > 1:
             self.box_marker.set_state(TooMuchCodesState)
+            return
 
 
 class CreateAndPublishXML(State):
@@ -158,6 +165,7 @@ class CreateAndPublishXML(State):
         csv_file = generate_csv(self._detected_codes, self._detected_group_code)
         self._box_marker.write_file(csv_file, f"{filename}.csv", 'csv')
         self._box_marker.set_state(WaitForNextBox)
+        return
 
 
 class ErrorState(State):
@@ -172,6 +180,7 @@ class DuplicateCodeError(State):
         if not any(self._box_marker.db_manager.is_individual_code_exists(code) for code in codes) and \
                 not any(self._box_marker.db_manager.is_group_code_exists(code) for code in codes):
             self._box_marker.set_state(ReadyState)
+            return
 
 
 class WaitForNextBox(State):
@@ -180,6 +189,7 @@ class WaitForNextBox(State):
     def _process_detected_codes(self, codes: List[str]) -> None:
         if len(codes) == 0:
             self._box_marker.set_state(ReadyState)
+            return
 
 
 class BoxMarker(DeviceObserver):
