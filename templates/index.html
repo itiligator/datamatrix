@@ -9,12 +9,18 @@
         }
 
         .container {
+            display: flex;
             width: 95%;
             margin: 0 auto;
         }
 
-        h1 {
-            text-align: center;
+        .left-column {
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        .right-column {
+            flex: 1;
         }
 
         .square {
@@ -44,19 +50,21 @@
 </head>
 <body>
 <div id="app" class="container">
-    <h2>Состояние: {{state.name}}</h2>
-    <div>
-        <div :class="squareClass(1)" class="square"></div>
-        <div :class="squareClass(2)" class="square"></div>
-        <div :class="squareClass(3)" class="square"></div>
+    <div class="left-column">
+        <h2>Состояние: {{state.name}}</h2>
+        <div>
+            <div :class="squareClass(1)" class="square"></div>
+            <div :class="squareClass(2)" class="square"></div>
+            <div :class="squareClass(3)" class="square"></div>
+        </div>
+        <h2>Распознано кодов в кадре: {{detectedCodes.detected_count}} </h2>
+        <h2>Накоплено кодов: {{collectedCodes.collected_count}} </h2>
+        <h2>Камера: {{ devicesStatus.datamatrix_decoder }}</h2>
+        <button @click="reset">Сброс</button>
     </div>
-    <h2>Распознано кодов в кадре: {{detectedCodes.detected_count}} </h2>
-    <h2>Накоплено кодов: {{collectedCodes.collected_count}} </h2>
-    <div>
+    <div class="right-column">
         <img :src="regionImageSrc" alt="Region Image" style="max-width: 100%; border: 1px solid #ddd;">
     </div>
-    <h2>Камера: {{ devicesStatus.datamatrix_decoder }}</h2>
-    <button @click="reset">Сброс</button>
 </div>
 <script>
     new Vue({
