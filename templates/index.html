@@ -17,10 +17,27 @@
             text-align: center;
         }
 
-        pre {
-            background: #f4f4f4;
-            padding: 10px;
-            border: 1px solid #ddd;
+        .square {
+            width: 100px;
+            height: 100px;
+            display: inline-block;
+            margin: 5px;
+        }
+
+        .green {
+            background-color: green;
+        }
+
+        .yellow {
+            background-color: yellow;
+        }
+
+        .red {
+            background-color: red;
+        }
+
+        .grey {
+            background-color: grey;
         }
     </style>
     <title></title>
@@ -28,6 +45,11 @@
 <body>
 <div id="app" class="container">
     <h2>Состояние: {{state.name}}</h2>
+    <div>
+        <div :class="squareClass(1)" class="square"></div>
+        <div :class="squareClass(2)" class="square"></div>
+        <div :class="squareClass(3)" class="square"></div>
+    </div>
     <h2>Распознано кодов в кадре: {{detectedCodes.detected_count}} </h2>
     <h2>Накоплено кодов: {{collectedCodes.collected_count}} </h2>
     <div>
@@ -61,8 +83,43 @@
                 this.regionImageSrc = '/region_image?t=' + new Date().getTime();
             },
             async reset() {
-                await fetch('/reset', { method: 'POST' });
+                await fetch('/reset', {method: 'POST'});
                 this.updateData();
+            },
+            squareClass(index) {
+                if (this.state.code === 0) {
+                    return 'grey';
+                } else if (this.state.code === 1) {
+                    if (index === 1) {
+                        return 'green';
+                    } else {
+                        return 'grey';
+                    }
+                } else if (this.state.code === 2) {
+                    if (index === 1) {
+                        return 'green';
+                    } else if (index === 2) {
+                        return 'yellow';
+                    } else {
+                        return 'grey';
+                    }
+                } else if (this.state.code === 3 || this.state.code === 4) {
+                    if (index === 1) {
+                        return 'green';
+                    } else if (index === 2) {
+                        return 'green';
+                    } else {
+                        return 'yellow';
+                    }
+                } else if (this.state.code === 5) {
+                    return 'green';
+                } else if (this.state.code === -2 || this.state.code === -1) {
+                    return 'yellow';
+                } else if (this.state.code === -3) {
+                    return 'red';
+                } else {
+                    return 'grey';
+                }
             }
         },
         mounted() {
