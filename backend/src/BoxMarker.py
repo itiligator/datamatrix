@@ -20,6 +20,7 @@ class State:
     _detected_codes: List[str] = []
     _detected_group_code: str | None = None
     name: ClassVar[str] = "НЕОПРЕДЕЛЕНО"
+    code: ClassVar[int] = 0
 
     def __init__(self, other_state: State = None) -> None:
         self._lock = threading.Lock()
@@ -66,6 +67,7 @@ class State:
 
 class ReadyState(State):
     name = "ГОТОВ"
+    code = 1
 
     def do_job_once(self):
         self._detected_codes = []
@@ -90,6 +92,7 @@ class ReadyState(State):
 
 class CollectingCodesState(State):
     name = "РАСПОЗНАЮ КОДЫ С БУТЫЛОК"
+    code = 2
 
     def _process_detected_codes(self, codes):
         if len(codes) == 0:
@@ -120,10 +123,12 @@ class CollectingCodesState(State):
 
 class TooMuchCodesState(ReadyState):
     name = "СЛИШКОМ МНОГО КОДОВ В КАДРЕ"
+    code = -1
 
 
 class CollectSingleGroupCode(State):
     name = "РАСПОЗНАЮ КОД АГРЕГАЦИИ"
+    code = 3
 
     def _process_detected_codes(self, codes):
         new_codes = [code for code in codes if not code in self.detected_codes]
@@ -146,6 +151,7 @@ class CollectSingleGroupCode(State):
 
 class CreateAndPublishXML(State):
     name = "СОЗДАЮ И СОХРАНЯЮ XML"
+    code = 4
 
     def do_job_once(self):
         seq = self._box_marker.db_manager.save_codes(self._detected_codes, self._detected_group_code)
@@ -174,10 +180,12 @@ class CreateAndPublishXML(State):
 
 class ErrorState(State):
     name = "ОШИБКА"
+    code = -3
 
 
 class DuplicateCodeError(State):
     name = "ОШИБКА: РАНЕЕ УЧТЕННЫЙ КОД В КАДРЕ"
+    code = -2
 
     def _process_detected_codes(self, codes: List[str]) -> None:
         # if there is no longer duplicate codes, return to the Ready state
@@ -189,6 +197,7 @@ class DuplicateCodeError(State):
 
 class WaitForNextBox(State):
     name = "ОЖИДАНИЕ СЛЕДУЮЩЕЙ КОРОБКИ"
+    code = 5
 
     def _process_detected_codes(self, codes: List[str]) -> None:
         if len(codes) == 0:
@@ -241,12 +250,11 @@ class BoxMarker(DeviceObserver):
         if self._file_saver:
             self._file_saver.save_file(filename, xml_file_content, subdir)
 
-    async def get_state(self) -> str:
-        return self._state.name
+    async def get_state(self) -> dict:
+        return {"name": self._state.name, "code": self._state.code}
 
     async def get_devices_status(self) -> dict:
         return self._devices_status_handler.get_statuses()
-
 
     def get_detected_codes(self) -> List[str]:
         return self._state.detected_codes
