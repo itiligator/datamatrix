@@ -74,14 +74,12 @@ class ReadyState(State):
     def _process_detected_codes(self, codes):
         if 0 < len(codes) <= self._box_marker.expected_bottles_number:
             self._detected_codes = codes
-            
             # Check for duplicate codes in the database
             duplicates_exist = any(self._box_marker.db_manager.is_individual_code_exists(code) for code in codes)
             duplicates_exist |= any(self._box_marker.db_manager.is_group_code_exists(code) for code in codes)
             if duplicates_exist:
                 self._box_marker.set_state(DuplicateCodeError)
                 return
-                
             self._box_marker.set_state(CollectingCodesState)
         elif len(codes) > self._box_marker.expected_bottles_number:
             self._detected_codes = []
@@ -129,12 +127,10 @@ class CollectSingleGroupCode(State):
         #     logging.info(code[-12:-1])
         if len(new_codes) == 1:
             self._detected_group_code = codes[0]
-            
             # Check if the group code already exists in the database
             if self._box_marker.db_manager.is_group_code_exists(self._detected_group_code):
                 self._box_marker.set_state(DuplicateCodeError)
                 return
-                
             # Proceed to create XML
             self.box_marker.set_state(CreateAndPublishXML)
         elif len(new_codes) > 1:
@@ -145,17 +141,21 @@ class CreateAndPublishXML(State):
     name = "СОЗДАЮ И СОХРАНЯЮ XML"
 
     def do_job_once(self):
-        logging.info(f"Создаю и сохраняю XML файл {self._detected_group_code}.xml")
-        xml_file = generate_xml(self._detected_codes, self._detected_group_code)
-        csv_file = generate_csv(self._detected_codes, self._detected_group_code)
         seq = self._box_marker.db_manager.save_codes(self._detected_codes, self._detected_group_code)
         if seq == -1:
+            logging.error("Ошибка сохранения кодов в базу данных")
             self._box_marker.set_state(ErrorState)
             return
-        logging.info(f"Сохранено {len(self._detected_codes)} индивидуальных кодов и 1 групповой код в базу данных. Номер последовательности: {seq}")
+        logging.info(
+            f"Сохранено {len(self._detected_codes)} индивидуальных кодов и 1 групповой код в базу данных. "
+            f"Номер последовательности: {seq}")
         current_day = datetime.today().strftime('%d%m%Y')
         filename = f"{seq:04d}_{current_day}"
+        logging.info(f"Создаю и сохраняю XML файл {filename}.xml")
+        xml_file = generate_xml(self._detected_codes, self._detected_group_code)
         self._box_marker.write_file(xml_file, f"{filename}.xml", 'xml')
+        logging.info(f"Создаю и сохраняю CSV файл {filename}.csv")
+        csv_file = generate_csv(self._detected_codes, self._detected_group_code)
         self._box_marker.write_file(csv_file, f"{filename}.csv", 'csv')
         self._box_marker.set_state(WaitForNextBox)
 
@@ -170,8 +170,9 @@ class DuplicateCodeError(State):
     def _process_detected_codes(self, codes: List[str]) -> None:
         # if there is no longer duplicate codes, return to the Ready state
         if not any(self._box_marker.db_manager.is_individual_code_exists(code) for code in codes) and \
-              not  any(self._box_marker.db_manager.is_group_code_exists(code) for code in codes):
+                not any(self._box_marker.db_manager.is_group_code_exists(code) for code in codes):
             self._box_marker.set_state(ReadyState)
+
 
 class WaitForNextBox(State):
     name = "ОЖИДАНИЕ СЛЕДУЮЩЕЙ КОРОБКИ"
@@ -179,6 +180,7 @@ class WaitForNextBox(State):
     def _process_detected_codes(self, codes: List[str]) -> None:
         if len(codes) == 0:
             self._box_marker.set_state(ReadyState)
+
 
 class BoxMarker(DeviceObserver):
     _state: State
