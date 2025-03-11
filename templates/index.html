@@ -14,8 +14,6 @@
     <div class="container">
         <h1>DataMatrix Decoder Dashboard</h1>
         <h2>Status</h2>
-        <pre id="status"></pre>
-        <h2>Devices Status</h2>
         <pre id="devices_status"></pre>
         <h2>Camera View</h2>
         <div>
@@ -25,8 +23,6 @@
         <pre id="state"></pre>
         <h2>Detected Codes</h2>
         <pre id="detected_codes"></pre>
-        <h2>Results</h2>
-        <ul id="file_list"></ul>
     </div>
     <script>
         async function fetchJsonData(url, elementId) {
@@ -35,20 +31,6 @@
             document.getElementById(elementId).innerText = JSON.stringify(data, null, 2);
         }
 
-        async function fetchFileList() {
-            const response = await fetch('/files');
-            const files = await response.json();
-            const fileListElement = document.getElementById('file_list');
-            fileListElement.innerHTML = '';
-            files.forEach(file => {
-                const listItem = document.createElement('li');
-                const link = document.createElement('a');
-                link.href = `/files/${file}`;
-                link.innerText = file;
-                listItem.appendChild(link);
-                fileListElement.appendChild(listItem);
-            });
-        }
 
         function updateImage() {
             const img = document.getElementById('region_image');
@@ -56,11 +38,9 @@
         }
 
         function updateData() {
-            fetchJsonData('/status', 'status');
             fetchJsonData('/devices_status', 'devices_status');
             fetchJsonData('/state', 'state');
             fetchJsonData('/detected_codes', 'detected_codes');
-            fetchFileList();
         }
 
         setInterval(updateImage, 500);

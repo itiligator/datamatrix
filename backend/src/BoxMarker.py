@@ -247,15 +247,6 @@ class BoxMarker(DeviceObserver):
     async def get_devices_status(self) -> dict:
         return self._devices_status_handler.get_statuses()
 
-    async def get_status(self) -> str:
-        if isinstance(self._state, ErrorState):
-            return "ОШИБКА"
-        elif isinstance(self._state, DuplicateCodeError):
-            return "ОШИБКА ДУБЛИРОВАНИЯ"
-        elif isinstance(self._state, TooMuchCodesState):
-            return "ПРЕДУПРЕЖДЕНИЕ"
-        else:
-            return "OK"
 
     def get_detected_codes(self) -> List[str]:
         return self._state.detected_codes

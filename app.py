@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 import sys
 import argparse
 import threading
@@ -44,12 +43,6 @@ def get_region_image():
     return send_file('region.jpg', mimetype='image/jpeg')
 
 
-@app.route('/status')
-async def get_status():
-    status = await box_marker.get_status()
-    return jsonify(status=status)
-
-
 @app.route('/devices_status')
 async def get_devices_status():
     devices_status = await box_marker.get_devices_status()
@@ -66,17 +59,6 @@ async def get_state():
 async def get_detected_codes():
     detected_codes = box_marker.get_detected_codes()
     return jsonify(detected_codes=detected_codes)
-
-
-@app.route('/files')
-async def list_files():
-    files = os.listdir('results')
-    return jsonify(files)
-
-
-@app.route('/files/<filename>')
-async def download_file(filename):
-    return send_file(os.path.join('results', filename), as_attachment=True)
 
 
 def start_flask():
