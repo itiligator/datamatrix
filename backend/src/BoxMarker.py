@@ -152,7 +152,7 @@ class CreateAndPublishXML(State):
             return
         logging.info(f"Сохранено {len(self._detected_codes)} индивидуальных кодов и 1 групповой код в базу данных. Номер последовательности: {seq}")
         current_day = datetime.today().strftime('%d%m%Y')
-        filename = f"{seq:04d}_{current_day}.xml"
+        filename = f"{seq:04d}_{current_day}"
         self._box_marker.write_file(xml_file, f"{filename}.xml", 'xml')
         self._box_marker.write_file(csv_file, f"{filename}.csv", 'csv')
         self._box_marker.set_state(ReadyState)
