@@ -1,6 +1,9 @@
 import asyncio
+import shutil
+import time
 from datetime import datetime
 import random
+import cv2
 
 from backend.src.StatusObservable import StatusObservable
 from backend.src.status import DatamatrixDecoderStatus
@@ -36,6 +39,7 @@ class DataMatrixDecoderMock(StatusObservable):
                     subset = random.sample(codes, subset_length)
                 elif i == self.total_codes_num:
                     subset = codes
+                self.create_image(subset)
                 await self.callback(subset)
 
             for i in range(self.total_codes_num + 1):
@@ -48,4 +52,5 @@ class DataMatrixDecoderMock(StatusObservable):
                 subset = []
                 if self.empty_codes_num < i <= self.total_codes_num:
                     subset = [f"{iteration}_agg_{current_time_string}"]
+                self.create_image(subset)
                 await self.callback(subset)

@@ -1,5 +1,6 @@
 import base64
 from asyncio import Queue
+import shutil
 
 import cv2
 import numpy
@@ -54,8 +55,19 @@ class DataMatrixDecoder(StatusObservable):
         self.queue = Queue()
         self.status = DatamatrixDecoderStatus.INIT
         self.notify()
+        self.set_no_image_available_picture()
         self.client = None
         self.auth = DigestAuth('admin', 'salek2025')
+
+    def __del__(self):
+        if self.client:
+            self.client.aclose()
+
+    @staticmethod
+    def set_no_image_available_picture():
+        # copy no_image_available.jpg to region.jpg
+        shutil.copyfile('no_image_available.jpg', 'region.jpg')
+
 
     async def fetch_image(self):
         try:
@@ -72,6 +84,7 @@ class DataMatrixDecoder(StatusObservable):
             logging.error(f"Кадр недоступен по сети: {e}")
             self.status = DatamatrixDecoderStatus.IMAGE_UNAVAILABLE
             self.notify()
+            self.set_no_image_available_picture()
             return None
 
     async def image_producer(self):
@@ -92,6 +105,7 @@ class DataMatrixDecoder(StatusObservable):
                 logging.error(f"Ошибка получения картинки: {e}")
                 self.status = DatamatrixDecoderStatus.GENERAL_FAILURE
                 self.notify()
+                self.set_no_image_available_picture()
 
     async def image_consumer(self):
         """Process images from the queue"""
@@ -115,6 +129,7 @@ class DataMatrixDecoder(StatusObservable):
                 logging.error(f"Ошибка распознавания кодов: {e}")
                 self.status = DatamatrixDecoderStatus.GENERAL_FAILURE
                 self.notify()
+                self.set_no_image_available_picture()
                 await asyncio.sleep(0.1)
 
     def decode_datamatrix(self, image):
@@ -135,4 +150,5 @@ class DataMatrixDecoder(StatusObservable):
                 logging.error(f"Общая ошибка главного цикла: {e}")
                 self.status = DatamatrixDecoderStatus.GENERAL_FAILURE
                 self.notify()
+                self.set_no_image_available_picture()
                 await asyncio.sleep(2)
