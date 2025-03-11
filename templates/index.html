@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>DataMatrix Decoder Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -25,42 +26,48 @@
     </style>
 </head>
 <body>
-<div class="container">
+<div id="app" class="container">
     <h1>DataMatrix Decoder Dashboard</h1>
     <h2>Current State</h2>
-    <pre id="state"></pre>
+    <pre>СОСТОЯНИЕ: {{ state.name }}</pre>
     <h2>Status</h2>
-    <pre id="devices_status"></pre>
+    <pre>{{ devicesStatus }}</pre>
     <h2>Camera View</h2>
     <div>
-        <img id="region_image" src="/region_image" alt="Region Image" style="max-width: 100%; border: 1px solid #ddd;">
+        <img :src="regionImageSrc" alt="Region Image" style="max-width: 100%; border: 1px solid #ddd;">
     </div>
-
     <h2>Detected Codes</h2>
-    <pre id="detected_codes"></pre>
+    <pre>{{ detectedCodes }}</pre>
 </div>
 <script>
-    async function fetchJsonData(url, elementId) {
-        const response = await fetch(url);
-        const data = await response.json();
-        document.getElementById(elementId).innerText = JSON.stringify(data, null, 2);
-    }
-
-
-    function updateImage() {
-        const img = document.getElementById('region_image');
-        img.src = '/region_image?t=' + new Date().getTime();
-    }
-
-    function updateData() {
-        fetchJsonData('/devices_status', 'devices_status');
-        fetchJsonData('/state', 'state');
-        fetchJsonData('/detected_codes', 'detected_codes');
-    }
-
-    setInterval(updateImage, 500);
-    setInterval(updateData, 500);
-    updateData();
+    new Vue({
+        el: '#app',
+        data: {
+            state: {},
+            devicesStatus: {},
+            detectedCodes: [],
+            regionImageSrc: '/region_image'
+        },
+        methods: {
+            async fetchJsonData(url) {
+                const response = await fetch(url);
+                return await response.json();
+            },
+            async updateData() {
+                this.state = await this.fetchJsonData('/state');
+                this.devicesStatus = await this.fetchJsonData('/devices_status');
+                this.detectedCodes = await this.fetchJsonData('/detected_codes');
+            },
+            updateImage() {
+                this.regionImageSrc = '/region_image?t=' + new Date().getTime();
+            }
+        },
+        mounted() {
+            this.updateData();
+            setInterval(this.updateImage, 500);
+            setInterval(this.updateData, 500);
+        }
+    });
 </script>
 </body>
 </html>

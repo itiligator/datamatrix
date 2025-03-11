@@ -5,7 +5,7 @@ import argparse
 import threading
 from datetime import datetime
 
-from flask import Flask, jsonify, render_template, send_file
+from flask import Flask, jsonify, send_file
 from backend.src.BoxMarker import BoxMarker
 from backend.src.DataMatrixDecoderMock import DataMatrixDecoderMock
 from backend.src.FileSaver import FileSaver
@@ -35,7 +35,7 @@ async def run_marker(url: str, timeout: int, expected_num: int, test: bool = Fal
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return send_file('templates/index.html')
 
 
 @app.route('/region_image')
