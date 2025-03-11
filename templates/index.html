@@ -9,7 +9,7 @@
         }
 
         .container {
-            width: 80%;
+            width: 95%;
             margin: 0 auto;
         }
 
@@ -34,7 +34,7 @@
         <img :src="regionImageSrc" alt="Region Image" style="max-width: 100%; border: 1px solid #ddd;">
     </div>
     <h2>Камера: {{ devicesStatus.datamatrix_decoder }}</h2>
-
+    <button @click="reset">Сброс</button>
 </div>
 <script>
     new Vue({
@@ -59,6 +59,10 @@
             },
             updateImage() {
                 this.regionImageSrc = '/region_image?t=' + new Date().getTime();
+            },
+            async reset() {
+                await fetch('/reset', { method: 'POST' });
+                this.updateData();
             }
         },
         mounted() {
@@ -66,8 +70,7 @@
             setInterval(this.updateImage, 200);
             setInterval(this.updateData, 50);
         }
-    })
-    ;
+    });
 </script>
 </body>
 </html>

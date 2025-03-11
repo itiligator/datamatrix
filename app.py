@@ -65,6 +65,12 @@ async def get_collected_codes():
     collected_codes = box_marker.get_collected_codes()
     return jsonify(collected_codes=collected_codes, collected_count=len(collected_codes))
 
+@app.route('/reset', methods=['POST'])
+def reset():
+    global box_marker
+    box_marker.reset()
+    return '', 204
+
 
 def start_flask():
     app.run(host='0.0.0.0', port=http_port)
