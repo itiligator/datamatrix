@@ -5,6 +5,7 @@ import random
 from backend.src.StatusObservable import StatusObservable
 from backend.src.status import DatamatrixDecoderStatus
 
+
 class DataMatrixDecoderMock(StatusObservable):
     def __init__(self, url: str, max_count: int, timeout: int, callback):
         super().__init__()
@@ -30,8 +31,8 @@ class DataMatrixDecoderMock(StatusObservable):
                 await asyncio.sleep(0.2)
                 subset = []
                 if self.empty_codes_num < i < self.total_codes_num:
-                    subset_length = random.choice([iteration, iteration - 1, iteration - 2])
-                    subset_length = max(1, subset_length)  # Ensure subset_length is at least 1
+                    subset_length = random.choice(
+                        [self.max_count, self.max_count - 1, self.max_count - 2, self.max_count - 3, 0])
                     subset = random.sample(codes, subset_length)
                 elif i == self.total_codes_num:
                     subset = codes
