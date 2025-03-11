@@ -52,13 +52,18 @@ async def get_devices_status():
 @app.route('/state')
 async def get_state():
     state = await box_marker.get_state()
-    return jsonify(state=state)
+    return jsonify(state)
 
 
 @app.route('/detected_codes')
 async def get_detected_codes():
     detected_codes = box_marker.get_detected_codes()
-    return jsonify(detected_codes=detected_codes)
+    return jsonify(detected_codes=detected_codes, detected_count=len(detected_codes))
+
+@app.route('/collected_codes')
+async def get_collected_codes():
+    collected_codes = box_marker.get_collected_codes()
+    return jsonify(collected_codes=collected_codes, collected_count=len(collected_codes))
 
 
 def start_flask():

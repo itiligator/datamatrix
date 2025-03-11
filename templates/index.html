@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>DataMatrix Decoder Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
     <style>
         body {
@@ -24,20 +23,18 @@
             border: 1px solid #ddd;
         }
     </style>
+    <title></title>
 </head>
 <body>
 <div id="app" class="container">
-    <h1>DataMatrix Decoder Dashboard</h1>
-    <h2>Current State</h2>
-    <pre>СОСТОЯНИЕ: {{ state.name }}</pre>
-    <h2>Status</h2>
-    <pre>{{ devicesStatus }}</pre>
-    <h2>Camera View</h2>
+    <h2>Состояние: {{state.name}}</h2>
+    <h2>Распознано кодов в кадре: {{detectedCodes.detected_count}} </h2>
+    <h2>Накоплено кодов: {{collectedCodes.collected_count}} </h2>
     <div>
         <img :src="regionImageSrc" alt="Region Image" style="max-width: 100%; border: 1px solid #ddd;">
     </div>
-    <h2>Detected Codes</h2>
-    <pre>{{ detectedCodes }}</pre>
+    <h2>Камера: {{ devicesStatus.datamatrix_decoder }}</h2>
+
 </div>
 <script>
     new Vue({
@@ -46,6 +43,7 @@
             state: {},
             devicesStatus: {},
             detectedCodes: [],
+            collectedCodes: [],
             regionImageSrc: '/region_image'
         },
         methods: {
@@ -57,6 +55,7 @@
                 this.state = await this.fetchJsonData('/state');
                 this.devicesStatus = await this.fetchJsonData('/devices_status');
                 this.detectedCodes = await this.fetchJsonData('/detected_codes');
+                this.collectedCodes = await this.fetchJsonData('/collected_codes');
             },
             updateImage() {
                 this.regionImageSrc = '/region_image?t=' + new Date().getTime();
@@ -64,10 +63,11 @@
         },
         mounted() {
             this.updateData();
-            setInterval(this.updateImage, 500);
-            setInterval(this.updateData, 500);
+            setInterval(this.updateImage, 200);
+            setInterval(this.updateData, 50);
         }
-    });
+    })
+    ;
 </script>
 </body>
 </html>

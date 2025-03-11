@@ -211,6 +211,7 @@ class BoxMarker(DeviceObserver):
     file_saver: FileSaver | None = None
     _devices_status_handler: DevicesStatusesHandler
     db_manager: DatabaseManager
+    latest_codes: List[str] = []
 
     def __init__(self, file_saver: FileSaver, expected_bottles_number: int) -> None:
         self.expected_bottles_number = expected_bottles_number
@@ -244,6 +245,7 @@ class BoxMarker(DeviceObserver):
             self.reset()
 
     async def process_detected_codes(self, codes: List) -> None:
+        self.latest_codes = codes
         self._state.process_detected_codes(codes)
 
     def write_file(self, xml_file_content: str, filename: str, subdir: str | None = None) -> None:
@@ -257,7 +259,13 @@ class BoxMarker(DeviceObserver):
         return self._devices_status_handler.get_statuses()
 
     def get_detected_codes(self) -> List[str]:
-        return self._state.detected_codes
+        return self.latest_codes
+
+    def get_collected_codes(self) -> List[str]:
+        if isinstance(self._state, CollectingCodesState):
+            return self._state.detected_codes
+        else:
+            return []
 
     def reset(self):
         self._state.reset(self)
