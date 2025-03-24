@@ -9,7 +9,7 @@ from backend.src.Codes2TXT import generate_csv
 from backend.src.DatabaseManager import DatabaseManager
 from backend.src.StatusObservable import DeviceObserver
 from backend.src.status import DevicesStatusesHandler
-
+from backend.src.code_checkers import is_km_valid, is_ka_valid
 from typing import ClassVar, List
 
 from backend.src.FileSaver import FileSaver
@@ -74,16 +74,22 @@ class ReadyState(State):
         self._detected_group_code = None
 
     def _process_detected_codes(self, codes):
-        if 0 < len(codes) <= self._box_marker.expected_bottles_number:
-            self._detected_codes = codes
+        valid_codes = [code for code in codes if is_km_valid(code)]
+        logging.info(f"Состояние: {self.name}.\tВалидных кодов: {len(valid_codes)}")
+        if 0 < len(valid_codes) <= self._box_marker.expected_bottles_number:
+            # save only valid codes
+            self._detected_codes = valid_codes
             # Check for duplicate codes in the database
             duplicates_exist = any(self._box_marker.db_manager.is_individual_code_exists(code) for code in codes)
-            duplicates_exist |= any(self._box_marker.db_manager.is_group_code_exists(code) for code in codes)
             if duplicates_exist:
                 self._box_marker.set_state(DuplicateCodeError)
                 return
-            self._box_marker.set_state(CollectingCodesState)
-            return
+            if len(self._detected_codes) == self._box_marker.expected_bottles_number:
+                self._box_marker.set_state(CollectSingleGroupCode)
+                return
+            else:
+                self._box_marker.set_state(CollectingCodesState)
+                return
         elif len(codes) > self._box_marker.expected_bottles_number:
             self._detected_codes = []
             self._box_marker.set_state(TooMuchCodesState)
@@ -96,10 +102,12 @@ class CollectingCodesState(State):
 
     def _process_detected_codes(self, codes):
         if len(codes) == 0:
-            logging.info(f"Распознал ноль кодов, возврат на исходную")
+            logging.info(f"Состояние: {self.name}.\tРаспознал ноль кодов, возврат на исходную")
             self._box_marker.set_state(ReadyState)
             return
-        union_codes = set(self._detected_codes).union(set(codes))
+        valid_codes = [code for code in codes if is_km_valid(code)]
+        logging.info(f"Состояние: {self.name}.\tВалидных кодов: {len(valid_codes)}")
+        union_codes = set(self._detected_codes).union(set(valid_codes))
         logging.info(
             f"Состояние: {self.name}.\tНакоплено: {len(union_codes):2d}/{self.box_marker.expected_bottles_number}")
         # for code in union_codes:
@@ -131,12 +139,10 @@ class CollectSingleGroupCode(State):
     code = 3
 
     def _process_detected_codes(self, codes):
-        new_codes = [code for code in codes if not code in self.detected_codes]
-        logging.info(f"Состояние: {self.name}.\tНовых кодов: {len(new_codes):2d}")
-        # for code in new_codes:
-        #     logging.info(code[-12:-1])
-        if len(new_codes) == 1:
-            self._detected_group_code = codes[0]
+        valid_codes = [code for code in codes if is_ka_valid(code)]
+        logging.info(f"Состояние: {self.name}.\tВалидных кодов: {len(valid_codes):2d}")
+        if len(valid_codes) == 1:
+            self._detected_group_code = valid_codes[0]
             # Check if the group code already exists in the database
             if self._box_marker.db_manager.is_group_code_exists(self._detected_group_code):
                 self._box_marker.set_state(DuplicateCodeError)
@@ -144,7 +150,7 @@ class CollectSingleGroupCode(State):
             # Proceed to create XML
             self.box_marker.set_state(CreateAndPublishXML)
             return
-        elif len(new_codes) > 1:
+        elif len(valid_codes) > 1:
             self.box_marker.set_state(TooMuchCodesState)
             return
 

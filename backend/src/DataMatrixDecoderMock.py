@@ -1,5 +1,7 @@
 import asyncio
+import base64
 import shutil
+import string
 import time
 from datetime import datetime
 import random
@@ -21,6 +23,7 @@ class DataMatrixDecoderMock(StatusObservable):
         self.set_no_image_available_picture()
         # wait for 1 second without asyncio
         time.sleep(3)
+        self.country_code = 5
 
     @staticmethod
     def set_no_image_available_picture():
@@ -34,12 +37,24 @@ class DataMatrixDecoderMock(StatusObservable):
             cv2.putText(image, code, (10, 100 + idx * 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1)
         cv2.imwrite('region.jpg', image)
 
+    def generate_km_code(self,iteration, k):
+        current_milliseconds = int((time.time() * 1000) % 1000)
+        gtin = f'{iteration:03}000{k:02}000{current_milliseconds:03}'
+        serial_number = ''.join(random.choices(string.ascii_letters + string.digits + "!@#$%^&*()_+={}\[\]:;\"'<>,.?/\\|`~\-", k=6))
+        additional_code = ''.join(random.choices(string.ascii_letters + string.digits + "!@#$%^&*()_+={}\[\]:;\"'<>,.?/\\|`~\-", k=4))
+        return base64.b64encode(f"01{gtin}21{self.country_code}{serial_number}\x1d93{additional_code}".encode('utf-8')).decode('utf-8')
+
+    def generate_ka_code(self):
+        gtin = ''.join(random.choices(string.digits, k=14))
+        serial_number = ''.join(random.choices(string.ascii_letters + string.digits + "!@#$%^&*()_+={}\[\]:;\"'<>,.?/\\|`~\-", k=random.randint(1, 20)))
+        return base64.b64encode(f"02{gtin}\x1d37{self.max_count:02}\x1d21{serial_number}".encode('utf-8')).decode('utf-8')
+
     async def run(self):
         iteration = 0
         while True:
             iteration += 1
             current_time_string = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
-            codes = [f"{iteration}_{k}_{current_time_string}" for k in range(1, self.max_count + 1)]
+            codes = [self.generate_km_code(iteration, k) for k in range(1, self.max_count + 1)]
             for i in range(self.total_codes_num + 1):
                 self.status = DatamatrixDecoderStatus.FETCHING_IMAGE
                 self.notify()
@@ -67,6 +82,6 @@ class DataMatrixDecoderMock(StatusObservable):
                 subset = []
                 # random choice between 0 and 1 with 1 probability of 0.7
                 if self.empty_codes_num < i <= self.total_codes_num and random.random() < 0.7:
-                    subset = [f"{iteration}_agg_{current_time_string}"]
+                    subset = [self.generate_ka_code()]
                 self.create_image(subset)
                 await self.callback(subset)
