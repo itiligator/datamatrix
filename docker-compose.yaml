@@ -25,4 +25,4 @@ services:
       --log_level ${LOG_LEVEL}
       --http_port ${HTTP_PORT}
       --max_failed_attempts ${MAX_FAILED_ATTEMPTS}
-      --test
+#      --test
