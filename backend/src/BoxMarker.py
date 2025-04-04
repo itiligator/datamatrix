@@ -100,11 +100,21 @@ class CollectingCodesState(State):
     name = "РАСПОЗНАЮ КОДЫ С БУТЫЛОК"
     code = 2
 
+    def __init__(self, other_state: State = None) -> None:
+        super().__init__(other_state)
+        self._zero_count = 0
+
     def _process_detected_codes(self, codes):
         if len(codes) == 0:
-            logging.info(f"Состояние: {self.name}.\tРаспознал ноль кодов, возврат на исходную")
-            self._box_marker.set_state(ReadyState)
-            return
+            self._zero_count += 1
+            logging.info(
+                f"Состояние: {self.name}.\tРаспознал ноль кодов, возврат на исходную через "
+                f"{self.box_marker.max_failed_attempts - self._zero_count} попыток")
+            if self._zero_count >= self.box_marker.max_failed_attempts:
+                self._box_marker.set_state(ReadyState)
+                return
+        else:
+            self._zero_count = 0
         valid_codes = [code for code in codes if is_km_valid(code)]
         logging.info(f"Состояние: {self.name}.\tВалидных кодов: {len(valid_codes)}")
         union_codes = set(self._detected_codes).union(set(valid_codes))
@@ -219,13 +229,14 @@ class BoxMarker(DeviceObserver):
     db_manager: DatabaseManager
     latest_codes: List[str] = []
 
-    def __init__(self, file_saver: FileSaver, expected_bottles_number: int) -> None:
+    def __init__(self, file_saver: FileSaver, expected_bottles_number: int, max_failed_attempts: int) -> None:
         self.expected_bottles_number = expected_bottles_number
         self._file_saver = file_saver
         self.db_manager = DatabaseManager()
         self._state = ReadyState()
         self.reset()
         self._devices_status_handler = DevicesStatusesHandler()
+        self.max_failed_attempts = max_failed_attempts
 
     def __del__(self):
         self.set_state(ReadyState)

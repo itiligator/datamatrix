@@ -37,17 +37,23 @@ class DataMatrixDecoderMock(StatusObservable):
             cv2.putText(image, code, (10, 100 + idx * 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1)
         cv2.imwrite('region.jpg', image)
 
-    def generate_km_code(self,iteration, k):
+    def generate_km_code(self, iteration, k):
         current_milliseconds = int((time.time() * 1000) % 1000)
         gtin = f'{iteration:03}000{k:02}000{current_milliseconds:03}'
-        serial_number = ''.join(random.choices(string.ascii_letters + string.digits + "!@#$%^&*()_+={}\[\]:;\"'<>,.?/\\|`~\-", k=6))
-        additional_code = ''.join(random.choices(string.ascii_letters + string.digits + "!@#$%^&*()_+={}\[\]:;\"'<>,.?/\\|`~\-", k=4))
-        return base64.b64encode(f"01{gtin}21{self.country_code}{serial_number}\x1d93{additional_code}".encode('utf-8')).decode('utf-8')
+        serial_number = ''.join(
+            random.choices(string.ascii_letters + string.digits + "!@#$%^&*()_+={}\[\]:;\"'<>,.?/\\|`~\-", k=6))
+        additional_code = ''.join(
+            random.choices(string.ascii_letters + string.digits + "!@#$%^&*()_+={}\[\]:;\"'<>,.?/\\|`~\-", k=4))
+        return base64.b64encode(
+            f"01{gtin}21{self.country_code}{serial_number}\x1d93{additional_code}".encode('utf-8')).decode('utf-8')
 
     def generate_ka_code(self):
         gtin = ''.join(random.choices(string.digits, k=14))
-        serial_number = ''.join(random.choices(string.ascii_letters + string.digits + "!@#$%^&*()_+={}\[\]:;\"'<>,.?/\\|`~\-", k=random.randint(1, 20)))
-        return base64.b64encode(f"02{gtin}\x1d37{self.max_count:02}\x1d21{serial_number}".encode('utf-8')).decode('utf-8')
+        serial_number = ''.join(
+            random.choices(string.ascii_letters + string.digits + "!@#$%^&*()_+={}\[\]:;\"'<>,.?/\\|`~\-",
+                           k=random.randint(1, 20)))
+        return base64.b64encode(f"02{gtin}\x1d37{self.max_count:02}\x1d21{serial_number}".encode('utf-8')).decode(
+            'utf-8')
 
     async def run(self):
         iteration = 0
@@ -65,7 +71,7 @@ class DataMatrixDecoderMock(StatusObservable):
                 subset = []
                 if self.empty_codes_num < i < self.total_codes_num:
                     subset_length = random.choice(
-                        [self.max_count, self.max_count - 1, self.max_count - 2, self.max_count - 3, 0])
+                        [self.max_count - 1, self.max_count - 2, self.max_count - 3, 0, 0, 0, 0])
                     subset = random.sample(codes, subset_length)
                 elif i == self.total_codes_num:
                     subset = codes

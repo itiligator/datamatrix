@@ -13,6 +13,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL}
       - HTTP_PORT=${HTTP_PORT}
       - RESULTS_DIR=${RESULTS_DIR}
+      - MAX_FAILED_ATTEMPTS=${MAX_FAILED_ATTEMPTS}
     ports:
       - "${HTTP_PORT}:${HTTP_PORT}"
 #    network_mode: "host"
@@ -23,4 +24,5 @@ services:
       --expected_num ${EXPECTED_NUM}
       --log_level ${LOG_LEVEL}
       --http_port ${HTTP_PORT}
-    # --test  # Uncomment this line to run the tests with mock data
+      --max_failed_attempts ${MAX_FAILED_ATTEMPTS}
+      --test

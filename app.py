@@ -18,10 +18,11 @@ box_marker: BoxMarker | None = None
 http_port: int = 8001
 
 
-async def run_marker(url: str, timeout: int, expected_num: int, test: bool = False):
+async def run_marker(url: str, timeout: int, expected_num: int, max_failures: int, test: bool = False):
     global box_marker
     file_saver = FileSaver()
-    box_marker = BoxMarker(file_saver, expected_num)
+    box_marker = BoxMarker(file_saver=file_saver, expected_bottles_number=expected_num,
+                           max_failed_attempts=max_failures)
     file_saver.subscribe(box_marker)
     if not test:
         decoder = DataMatrixDecoder(url=url, max_count=expected_num, timeout=timeout,
@@ -60,10 +61,12 @@ async def get_detected_codes():
     detected_codes = box_marker.get_detected_codes()
     return jsonify(detected_codes=detected_codes, detected_count=len(detected_codes))
 
+
 @app.route('/collected_codes')
 async def get_collected_codes():
     collected_codes = box_marker.get_collected_codes()
     return jsonify(collected_codes=collected_codes, collected_count=len(collected_codes))
+
 
 @app.route('/reset', methods=['POST'])
 def reset():
@@ -85,6 +88,8 @@ def parse_args():
     parser.add_argument('--log_level', type=str, choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                         default='INFO', help='Уровень логирования')
     parser.add_argument('--test', action='store_true', help='Тестовый режим')
+    parser.add_argument('--max_failed_attempts', type=int, default=2,
+                        help='Максимальное количество попыток распознавания кодов на изображении')
     return parser.parse_args()
 
 
@@ -107,7 +112,7 @@ def main():
     flask_thread.start()
 
     asyncio.run(
-        run_marker(url=args.url, timeout=args.timeout * 1000, expected_num=args.expected_num, test=args.test))
+        run_marker(url=args.url, timeout=args.timeout * 1000, expected_num=args.expected_num, max_failures=args.max_failed_attempts, test=args.test))
 
 
 if __name__ == "__main__":
