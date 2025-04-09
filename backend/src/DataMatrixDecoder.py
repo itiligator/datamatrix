@@ -58,6 +58,8 @@ class DataMatrixDecoder(StatusObservable):
         self.set_no_image_available_picture()
         self.client = None
         self.auth = DigestAuth('admin', 'salek2025')
+        self.max_errors_count = 3
+        self.error_count = 0
 
     def __del__(self):
         if self.client:
@@ -79,13 +81,23 @@ class DataMatrixDecoder(StatusObservable):
             image_array = numpy.asarray(bytearray(response.content), dtype=numpy.uint8)
             image = cv2.imdecode(image_array, cv2.IMREAD_UNCHANGED)
             self.status = DatamatrixDecoderStatus.OK
+            self.error_count = 0
             return image
-        except (httpx.HTTPError, cv2.error) as e:
+        except httpx.HTTPError as e:
             logging.error(f"Кадр недоступен по сети: {e}")
-            self.status = DatamatrixDecoderStatus.IMAGE_UNAVAILABLE
-            self.notify()
-            self.set_no_image_available_picture()
+            if self.error_count < self.max_errors_count:
+                self.error_count += 1
+                self.status = DatamatrixDecoderStatus.IMAGE_UNAVAILABLE
+                self.notify()
+                self.set_no_image_available_picture()
             return None
+        except cv2.error as e:
+            logging.error(f"Проблемы с обработкой кадра: {e}")
+            if self.error_count < self.max_errors_count:
+                self.error_count += 1
+                self.status = DatamatrixDecoderStatus.GENERAL_FAILURE
+                self.notify()
+                self.set_no_image_available_picture()
 
     async def image_producer(self):
         """Continuously fetch images and put them in the queue"""
