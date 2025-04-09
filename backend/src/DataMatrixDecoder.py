@@ -87,6 +87,7 @@ class DataMatrixDecoder(StatusObservable):
             logging.error(f"Кадр недоступен по сети: {e}")
             if self.error_count < self.max_errors_count:
                 self.error_count += 1
+            else:
                 self.status = DatamatrixDecoderStatus.IMAGE_UNAVAILABLE
                 self.notify()
                 self.set_no_image_available_picture()
@@ -95,6 +96,7 @@ class DataMatrixDecoder(StatusObservable):
             logging.error(f"Проблемы с обработкой кадра: {e}")
             if self.error_count < self.max_errors_count:
                 self.error_count += 1
+            else:
                 self.status = DatamatrixDecoderStatus.GENERAL_FAILURE
                 self.notify()
                 self.set_no_image_available_picture()
