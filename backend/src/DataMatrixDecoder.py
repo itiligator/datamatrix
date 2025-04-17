@@ -132,7 +132,7 @@ class DataMatrixDecoder(StatusObservable):
         while True:
             try:
                 image = await self.queue.get()
-                # image = self.preprocess_frame(image)
+                image = self.preprocess_frame(image)
                 self.status = DatamatrixDecoderStatus.DECODING
                 self.notify()
                 decoded_messages_with_regions = self.decode_datamatrix(image)
