@@ -3,7 +3,7 @@ version: '3.8'
 services:
   app:
     build: .
-    container_name: datamatrix_decoder_app
+    container_name: datamatrix_decoder_app_rtsp
     volumes:
       - ${RESULTS_DIR}:/app/results
     environment:
