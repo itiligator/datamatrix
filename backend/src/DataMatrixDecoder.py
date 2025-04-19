@@ -8,6 +8,7 @@ import httpx
 import asyncio
 import logging
 import logging.config
+import numpy as np
 
 from .pylibdmtx import pylibdmtx
 from httpx import DigestAuth
@@ -101,6 +102,26 @@ class DataMatrixDecoder(StatusObservable):
                 self.notify()
                 self.set_no_image_available_picture()
 
+    @staticmethod
+    def preprocess_frame(frame):
+        """Улучшает контраст и удаляет блики перед декодированием."""
+        # 1. Конвертация в grayscale
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        # 2. Удаление бликов (adaptive thresholding)
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        _, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+        # 3. Увеличение контраста (CLAHE)
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        contrast = clahe.apply(thresh)
+
+        # 4. Морфологическое закрытие для устранения шума
+        kernel = np.ones((3, 3), np.uint8)
+        processed = cv2.morphologyEx(contrast, cv2.MORPH_CLOSE, kernel)
+
+        return processed
+
     async def image_producer(self):
         """Continuously fetch images and put them in the queue"""
         while True:
@@ -126,6 +147,7 @@ class DataMatrixDecoder(StatusObservable):
         while True:
             try:
                 image = await self.queue.get()
+                image = self.preprocess_frame(image)
                 self.status = DatamatrixDecoderStatus.DECODING
                 self.notify()
                 decoded_messages_with_regions = self.decode_datamatrix(image)
