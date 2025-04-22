@@ -10,6 +10,7 @@ from backend.src.BoxMarker import BoxMarker
 from backend.src.DataMatrixDecoderMock import DataMatrixDecoderMock
 from backend.src.FileSaver import FileSaver
 from backend.src.DataMatrixDecoder import DataMatrixDecoder
+from backend.src.LabelPrinter import LabelPrinter
 
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
@@ -18,10 +19,12 @@ box_marker: BoxMarker | None = None
 http_port: int = 8001
 
 
-async def run_marker(url: str, timeout: int, expected_num: int, max_failures: int, test: bool = False):
+async def run_marker(url: str, timeout: int, expected_num: int, max_failures: int, print_title: str = "Title", print_text: str = "Text",
+                     test: bool = False):
     global box_marker
     file_saver = FileSaver()
-    box_marker = BoxMarker(file_saver=file_saver, expected_bottles_number=expected_num,
+    printer = LabelPrinter(title=print_title, text=print_text)
+    box_marker = BoxMarker(file_saver=file_saver, printer=printer, expected_bottles_number=expected_num,
                            max_failed_attempts=max_failures)
     file_saver.subscribe(box_marker)
     if not test:
@@ -112,7 +115,8 @@ def main():
     flask_thread.start()
 
     asyncio.run(
-        run_marker(url=args.url, timeout=args.timeout * 1000, expected_num=args.expected_num, max_failures=args.max_failed_attempts, test=args.test))
+        run_marker(url=args.url, timeout=args.timeout * 1000, expected_num=args.expected_num,
+                   max_failures=args.max_failed_attempts, test=args.test))
 
 
 if __name__ == "__main__":

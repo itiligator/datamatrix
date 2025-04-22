@@ -6,6 +6,9 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     libopencv-dev \
     libdmtx-dev \
+    gcc \
+    python3-dev \
+    libcups2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Устанавливаем рабочую директорию

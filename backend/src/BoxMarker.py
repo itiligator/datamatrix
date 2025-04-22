@@ -10,7 +10,9 @@ from backend.src.DatabaseManager import DatabaseManager
 from backend.src.StatusObservable import DeviceObserver
 from backend.src.status import DevicesStatusesHandler
 from backend.src.code_checkers import is_km_valid, is_ka_valid
+from backend.src.LabelPrinter import LabelPrinter
 from typing import ClassVar, List
+from backend.src.ka_generator import ka_code
 
 from backend.src.FileSaver import FileSaver
 
@@ -85,7 +87,7 @@ class ReadyState(State):
                 self._box_marker.set_state(DuplicateCodeError)
                 return
             if len(self._detected_codes) == self._box_marker.expected_bottles_number:
-                self._box_marker.set_state(CollectSingleGroupCode)
+                self._box_marker.set_state(GenerateSingleGroupCode)
                 return
             else:
                 self._box_marker.set_state(CollectingCodesState)
@@ -135,7 +137,7 @@ class CollectingCodesState(State):
             if duplicates_exist:
                 self._box_marker.set_state(DuplicateCodeError)
                 return
-            self._box_marker.set_state(CollectSingleGroupCode)
+            self._box_marker.set_state(GenerateSingleGroupCode)
             return
 
 
@@ -144,25 +146,23 @@ class TooMuchCodesState(ReadyState):
     code = -1
 
 
-class CollectSingleGroupCode(State):
-    name = "РАСПОЗНАЮ КОД АГРЕГАЦИИ"
+class GenerateSingleGroupCode(State):
+    name = "ГЕНЕРИРУЮ КОД АГРЕГАЦИИ"
     code = 3
 
-    def _process_detected_codes(self, codes):
-        valid_codes = [code for code in codes if is_ka_valid(code)]
-        logging.info(f"Состояние: {self.name}.\tВалидных кодов: {len(valid_codes):2d}")
-        if len(valid_codes) == 1:
-            self._detected_group_code = valid_codes[0]
-            # Check if the group code already exists in the database
-            if self._box_marker.db_manager.is_group_code_exists(self._detected_group_code):
-                self._box_marker.set_state(DuplicateCodeError)
-                return
-            # Proceed to create XML
-            self.box_marker.set_state(CreateAndPublishXML)
-            return
-        elif len(valid_codes) > 1:
-            self.box_marker.set_state(TooMuchCodesState)
-            return
+    def do_job_once(self):
+        self._detected_group_code = ka_code(self._detected_codes)
+        logging.info(f"Сгенерирован код агрегации: {self._detected_group_code}")
+        self._box_marker.set_state(PrintLabelState)
+
+
+class PrintLabelState(State):
+    name = "ПЕЧАТАЮ ЭТИКЕТКУ"
+    code = 3
+
+    def do_job_once(self):
+        self._box_marker.print_label()
+        self._box_marker.set_state(CreateAndPublishXML)
 
 
 class CreateAndPublishXML(State):
@@ -228,8 +228,10 @@ class BoxMarker(DeviceObserver):
     _devices_status_handler: DevicesStatusesHandler
     db_manager: DatabaseManager
     latest_codes: List[str] = []
+    printer: LabelPrinter | None = None
 
-    def __init__(self, file_saver: FileSaver, expected_bottles_number: int, max_failed_attempts: int) -> None:
+    def __init__(self, file_saver: FileSaver, printer: LabelPrinter, expected_bottles_number: int,
+                 max_failed_attempts: int) -> None:
         self.expected_bottles_number = expected_bottles_number
         self._file_saver = file_saver
         self.db_manager = DatabaseManager()
@@ -237,10 +239,14 @@ class BoxMarker(DeviceObserver):
         self.reset()
         self._devices_status_handler = DevicesStatusesHandler()
         self.max_failed_attempts = max_failed_attempts
+        self.printer = printer
 
     def __del__(self):
         self.set_state(ReadyState)
         self.reset()
+
+    def print_label(self):
+        self.printer.print_label(self.latest_codes, self.expected_bottles_number)
 
     def set_state(self, state: type[State]):
         if not issubclass(state, State):

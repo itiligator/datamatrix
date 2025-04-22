@@ -29,10 +29,24 @@ class DatamatrixDecoderStatus(Enum):
         return self.value
 
 
+class PrinterStatus(Enum):
+    UNDEFINED = "UNDEFINED"
+    INIT = "INIT"
+    READY = "READY"
+    PRINTING = "PRINTING"
+    GENERAL_FAILURE = "GENERAL_FAILURE"
+    UNKNOWN_ERROR = "UNKNOWN_ERROR"
+    PRINTER_NOT_FOUND = "PRINTER_NOT_FOUND"
+
+    def __str__(self):
+        return self.value
+
+
 class DevicesStatusesHandler:
     def __init__(self):
         self._devices_status = {"file_saver": FileSaverStatus.UNDEFINED,
-                                "datamatrix_decoder": DatamatrixDecoderStatus.UNDEFINED}
+                                "datamatrix_decoder": DatamatrixDecoderStatus.UNDEFINED,
+                                "printer": PrinterStatus.UNDEFINED}
 
     def handle_status(self, status):
         self._update_device_status(status)
@@ -42,6 +56,8 @@ class DevicesStatusesHandler:
             self._devices_status["file_saver"] = status
         if isinstance(status, DatamatrixDecoderStatus):
             self._devices_status["datamatrix_decoder"] = status
+        if isinstance(status, PrinterStatus):
+            self._devices_status["printer"] = status
 
     def is_error(self):
         return (self._devices_status["file_saver"] in (
@@ -50,7 +66,8 @@ class DevicesStatusesHandler:
                 self._devices_status["datamatrix_decoder"] in (
                     DatamatrixDecoderStatus.GENERAL_FAILURE,
                     DatamatrixDecoderStatus.UNKNOWN_ERROR,
-                    DatamatrixDecoderStatus.IMAGE_UNAVAILABLE))
+                    DatamatrixDecoderStatus.IMAGE_UNAVAILABLE)) or self._devices_status["printer"] in (
+            PrinterStatus.GENERAL_FAILURE, PrinterStatus.UNKNOWN_ERROR, PrinterStatus.PRINTER_NOT_FOUND)
 
     def get_statuses(self):
         return {k: str(v) for k, v in self._devices_status.items()}
