@@ -14,6 +14,7 @@ class LabelPrinter(StatusObservable):
         self.title = title
         self.text = text
         self.cups_printer = None
+        self.cups_conn = None
         self.label_generator = LabelGenerator('templates/label.html', 'styles/label.css', title, text)
         try:
             self.cups_conn = cups.Connection()
@@ -29,14 +30,14 @@ class LabelPrinter(StatusObservable):
             logging.exception(f"Ошибка подключения к CUPS", exc_info=e)
             self.status = PrinterStatus.GENERAL_FAILURE
             self.notify()
-
-
+        except Exception as e:
+            logging.exception("Неизвестная ошибка при подключении к CUPS", exc_info=e)
 
     def print_label(self, code, seq):
+        label_filename = self.label_generator.generate_label(code, seq)
         if self.cups_printer is not None:
             self.status = PrinterStatus.PRINTING
             self.notify()
-            label_filename = self.label_generator.generate_label(code, seq)
             logging.info(f"Отправка задания на печать на принтер {self.cups_printer}")
             self.cups_conn.printFile(self.cups_printer, label_filename, "Label", {})
             logging.info(f"Задание на печать отправлено на принтер {self.cups_printer}")
