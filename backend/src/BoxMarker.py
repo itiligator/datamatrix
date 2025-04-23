@@ -9,7 +9,7 @@ from backend.src.Codes2TXT import generate_csv
 from backend.src.DatabaseManager import DatabaseManager
 from backend.src.StatusObservable import DeviceObserver
 from backend.src.status import DevicesStatusesHandler
-from backend.src.code_checkers import is_km_valid, is_ka_valid
+from backend.src.code_checkers import is_km_valid
 from backend.src.LabelPrinter import LabelPrinter
 from typing import ClassVar, List
 from backend.src.ka_generator import ka_code
@@ -23,6 +23,7 @@ class State:
     _detected_group_code: str | None = None
     name: ClassVar[str] = "НЕОПРЕДЕЛЕНО"
     code: ClassVar[int] = 0
+    current_seq: int = -1
 
     def __init__(self, other_state: State = None) -> None:
         self._lock = threading.Lock()
@@ -31,6 +32,7 @@ class State:
             self._detected_codes = other_state.detected_codes
             self._detected_group_code = other_state._detected_group_code
             self._box_marker = other_state.box_marker
+            self.current_seq = other_state.current_seq
 
     def reset(self, box_marker: BoxMarker) -> None:
         self._detected_codes = []
@@ -153,15 +155,31 @@ class GenerateSingleGroupCode(State):
     def do_job_once(self):
         self._detected_group_code = ka_code(self._detected_codes)
         logging.info(f"Сгенерирован код агрегации: {self._detected_group_code}")
-        self._box_marker.set_state(PrintLabelState)
+        self._box_marker.set_state(SaveToDatabaseState)
 
+
+class SaveToDatabaseState(State):
+    name = "СОХРАНЯЮ КОДЫ В БАЗУ ДАННЫХ"
+    code = 2
+
+    def do_job_once(self):
+        self.current_seq = self._box_marker.db_manager.save_codes(self._detected_codes, self._detected_group_code)
+        if self.current_seq == -1:
+            logging.error("Ошибка сохранения кодов в базу данных")
+            self._box_marker.set_state(ErrorState)
+            return
+        logging.info(
+            f"Сохранено {len(self._detected_codes)} индивидуальных кодов и 1 групповой код в базу данных. "
+            f"Номер последовательности: {self.current_seq}")
+
+        self._box_marker.set_state(PrintLabelState)
 
 class PrintLabelState(State):
     name = "ПЕЧАТАЮ ЭТИКЕТКУ"
     code = 3
 
     def do_job_once(self):
-        self._box_marker.print_label()
+        self._box_marker.print_label(self.detected_group_code, self.current_seq)
         self._box_marker.set_state(CreateAndPublishXML)
 
 
@@ -170,20 +188,12 @@ class CreateAndPublishXML(State):
     code = 4
 
     def do_job_once(self):
-        seq = self._box_marker.db_manager.save_codes(self._detected_codes, self._detected_group_code)
-        if seq == -1:
-            logging.error("Ошибка сохранения кодов в базу данных")
-            self._box_marker.set_state(ErrorState)
-            return
-        logging.info(
-            f"Сохранено {len(self._detected_codes)} индивидуальных кодов и 1 групповой код в базу данных. "
-            f"Номер последовательности: {seq}")
         logging.info(f"Коды бутылок:")
         for code in self._detected_codes:
             logging.info(code)
         logging.info(f"Код агрегации: {self._detected_group_code}")
         current_day = datetime.today().strftime('%d%m%Y')
-        filename = f"{seq:04d}_{current_day}"
+        filename = f"{self.current_seq:04d}_{current_day}"
         logging.info(f"Создаю и сохраняю XML файл {filename}.xml")
         xml_file = generate_xml(self._detected_codes, self._detected_group_code)
         self._box_marker.write_file(xml_file, f"{filename}.xml", 'xml')
@@ -245,8 +255,8 @@ class BoxMarker(DeviceObserver):
         self.set_state(ReadyState)
         self.reset()
 
-    def print_label(self):
-        self.printer.print_label(self.latest_codes, self.expected_bottles_number)
+    def print_label(self, ka, seq):
+        self.printer.print_label(ka, seq)
 
     def set_state(self, state: type[State]):
         if not issubclass(state, State):

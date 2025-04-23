@@ -15,6 +15,8 @@ services:
       - HTTP_PORT=${HTTP_PORT}
       - RESULTS_DIR=${RESULTS_DIR}
       - MAX_FAILED_ATTEMPTS=${MAX_FAILED_ATTEMPTS}
+      - LABEL_TEXT=${LABEL_TEXT}
+      - LABEL_TITLE=${LABEL_TITLE}
     ports:
       - "${HTTP_PORT}:${HTTP_PORT}"
 #    network_mode: "host"
@@ -26,4 +28,6 @@ services:
       --log_level ${LOG_LEVEL}
       --http_port ${HTTP_PORT}
       --max_failed_attempts ${MAX_FAILED_ATTEMPTS}
+      --label_title "${LABEL_TITLE}" 
+      --label_text "${LABEL_TEXT}"
 #      --test

@@ -1,0 +1,19 @@
+<div class="title">
+    КИТУ Честный Знак
+</div>
+<div class="grand_title">
+    {{ title }}
+</div>
+<div class="title">
+    {{ text }}
+</div>
+<div class="datamatrix">
+    <img src="{{label_tools.datamatrix(code)}}"/>
+</div>
+<div class="code_text">
+    {{ code_text }}
+</div>
+<div class="footer">
+    <div class="seq">{{ seq }}</div>
+    <div class="datetime">{{ label_tools.now() }}</div>
+</div>

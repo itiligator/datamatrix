@@ -1,0 +1,53 @@
+@page {
+    width: 58mm;
+    height: 60mm;
+    padding: 3mm;
+    margin: 0; /* Убираем внешние отступы */
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.grand_title {
+    text-align: center;
+    font-size: 6mm;
+    margin-bottom: var(--spacing, 1mm);
+}
+
+.title {
+    text-align: center;
+    font-size: 2mm;
+    margin-bottom: var(--spacing, 2mm);
+}
+
+.datamatrix {
+    text-align: center;
+    margin-bottom: var(--spacing, 3mm);
+}
+
+.datamatrix img {
+    width: 25mm;
+    height: 25mm;
+}
+
+.code_text {
+    text-align: center;
+    font-size: 3mm;
+    margin-bottom: var(--spacing, 2mm);
+}
+
+.footer {
+    display: flex;
+    justify-content: space-between;
+    font-size: 3mm;
+    margin-top: var(--spacing, 2mm);
+    width: 100%;
+}

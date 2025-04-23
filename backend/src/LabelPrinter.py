@@ -1,9 +1,9 @@
 import logging
-import os
 import cups
 
 from backend.src.StatusObservable import StatusObservable
 from backend.src.status import PrinterStatus
+from backend.src.LabelGenerator import LabelGenerator
 
 
 class LabelPrinter(StatusObservable):
@@ -14,6 +14,7 @@ class LabelPrinter(StatusObservable):
         self.title = title
         self.text = text
         self.cups_printer = None
+        self.label_generator = LabelGenerator('templates/label.html', 'styles/label.css', title, text)
         try:
             self.cups_conn = cups.Connection()
             self.cups_printer = self.cups_conn.getDefault()
@@ -35,8 +36,9 @@ class LabelPrinter(StatusObservable):
         if self.cups_printer is not None:
             self.status = PrinterStatus.PRINTING
             self.notify()
+            label_filename = self.label_generator.generate_label(code, seq)
             logging.info(f"Отправка задания на печать на принтер {self.cups_printer}")
-            self.cups_conn.printFile(self.cups_printer, "58x60.pdf", "Label", {})
+            self.cups_conn.printFile(self.cups_printer, label_filename, "Label", {})
             logging.info(f"Задание на печать отправлено на принтер {self.cups_printer}")
             self.status = PrinterStatus.READY
             self.notify()

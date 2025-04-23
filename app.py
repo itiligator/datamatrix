@@ -93,6 +93,8 @@ def parse_args():
     parser.add_argument('--test', action='store_true', help='Тестовый режим')
     parser.add_argument('--max_failed_attempts', type=int, default=2,
                         help='Максимальное количество попыток распознавания кодов на изображении')
+    parser.add_argument('--label_title', type=str, default="Заголовок", help='Заголовок для печати наклейки')
+    parser.add_argument('--label_text', type=str, default="Текст", help='Текст под заголовком для печати наклейки')
     return parser.parse_args()
 
 
@@ -116,7 +118,7 @@ def main():
 
     asyncio.run(
         run_marker(url=args.url, timeout=args.timeout * 1000, expected_num=args.expected_num,
-                   max_failures=args.max_failed_attempts, test=args.test))
+                   max_failures=args.max_failed_attempts, print_title=args.label_title, print_text=args.label_text, test=args.test))
 
 
 if __name__ == "__main__":
