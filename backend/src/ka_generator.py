@@ -25,13 +25,15 @@ def gtin_from_codes(codes: List[str]) -> str:
     gtin = gtins[0]
     return gtin
 
+
 def _generate_ka_code(gtin: str, count: int) -> str:
     serial_number = ''.join(
-        random.choices(string.ascii_letters + string.digits + "!@#$%^&*()_+={}\[\]:;\"'<>,.?/\\|`~\-",
+        random.choices(string.ascii_letters + string.digits,
                        k=random.randint(MIN_SERIAL_NUMBER_LENGTH, MAX_SERIAL_NUMBER_LENGTH)))
 
     return base64.b64encode(f"02{gtin}\x1d37{count:02}\x1d21{serial_number}".encode('utf-8')).decode(
         'utf-8')
+
 
 def ka_code(codes: List[str]) -> str:
     gtin = gtin_from_codes(codes)
