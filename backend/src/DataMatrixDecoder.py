@@ -4,16 +4,16 @@ import shutil
 
 import cv2
 import numpy
-import httpx
+import numpy as np
 import asyncio
 import logging
 import logging.config
 
 from .pylibdmtx import pylibdmtx
-from httpx import DigestAuth
 
 from backend.src.StatusObservable import StatusObservable
 from backend.src.status import DatamatrixDecoderStatus
+
 LOGGING_CONFIG = {
     "version": 1,
     "handlers": {
@@ -41,50 +41,62 @@ LOGGING_CONFIG = {
     }
 }
 
-
 logging.config.dictConfig(LOGGING_CONFIG)
 
 
 class DataMatrixDecoder(StatusObservable):
     def __init__(self, url: str, max_count: int, timeout: int, callback):
+        self.set_no_image_available_picture()
         super().__init__()
-        self.url = url
         self.max_count = max_count
         self.timeout = timeout
         self.callback = callback
         self.queue = Queue()
         self.status = DatamatrixDecoderStatus.INIT
         self.notify()
-        self.set_no_image_available_picture()
-        self.client = None
-        self.auth = DigestAuth('admin', 'salek2025')
         self.max_errors_count = 3
         self.error_count = 0
 
-    def __del__(self):
-        if self.client:
-            self.client.aclose()
+        self.rtsp_url = url
+
+        self.cap = cv2.VideoCapture(self.rtsp_url)
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
 
     @staticmethod
     def set_no_image_available_picture():
         # copy no_image_available.jpg to region.jpg
         shutil.copyfile('no_image_available.jpg', 'region.jpg')
 
+    @staticmethod
+    def preprocess_frame(frame):
+        """Улучшает контраст и удаляет блики перед декодированием."""
+        # 1. Конвертация в grayscale
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    async def fetch_image(self):
+        # 2. Удаление бликов (adaptive thresholding)
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        _, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+        # 3. Увеличение контраста (CLAHE)
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        contrast = clahe.apply(thresh)
+
+        # 4. Морфологическое закрытие для устранения шума
+        kernel = np.ones((3, 3), np.uint8)
+        processed = cv2.morphologyEx(contrast, cv2.MORPH_CLOSE, kernel)
+
+        return processed
+
+    def fetch_image(self):
         try:
-            if self.client is None:
-                self.client = httpx.AsyncClient(auth=self.auth)
-            # TODO: make it configurable
-            response = await self.client.get(self.url, timeout=1.0)
-            response.raise_for_status()
-            image_array = numpy.asarray(bytearray(response.content), dtype=numpy.uint8)
-            image = cv2.imdecode(image_array, cv2.IMREAD_UNCHANGED)
-            self.status = DatamatrixDecoderStatus.OK
-            self.error_count = 0
-            return image
-        except httpx.HTTPError as e:
-            logging.error(f"Кадр недоступен по сети: {e}")
+            ret, frame = self.cap.read()
+            if not ret:
+                print("[Reconnecting] RTSP stream...")
+                self.cap.release()
+                self.cap = cv2.VideoCapture(self.rtsp_url)
+            return frame
+        except Exception as e:
+            logging.error(f"Ошибка получения кадра: {e}")
             if self.error_count < self.max_errors_count:
                 self.error_count += 1
             else:
@@ -92,23 +104,17 @@ class DataMatrixDecoder(StatusObservable):
                 self.notify()
                 self.set_no_image_available_picture()
             return None
-        except cv2.error as e:
-            logging.error(f"Проблемы с обработкой кадра: {e}")
-            if self.error_count < self.max_errors_count:
-                self.error_count += 1
-            else:
-                self.status = DatamatrixDecoderStatus.GENERAL_FAILURE
-                self.notify()
-                self.set_no_image_available_picture()
 
     async def image_producer(self):
         """Continuously fetch images and put them in the queue"""
         while True:
             try:
-                if self.status != DatamatrixDecoderStatus.IMAGE_UNAVAILABLE:
+                if self.status not in (
+                DatamatrixDecoderStatus.IMAGE_UNAVAILABLE, DatamatrixDecoderStatus.GENERAL_FAILURE):
                     self.status = DatamatrixDecoderStatus.FETCHING_IMAGE
                     self.notify()
-                image = await self.fetch_image()
+                await asyncio.sleep(0.1)
+                image = self.fetch_image()
                 if image is not None:
                     self.status = DatamatrixDecoderStatus.OK
                     self.notify()
@@ -116,7 +122,7 @@ class DataMatrixDecoder(StatusObservable):
                 else:
                     await asyncio.sleep(1.0)
             except Exception as e:
-                logging.error(f"Ошибка получения картинки: {e}")
+                logging.exception(f"Ошибка получения картинки", exc_info=e)
                 self.status = DatamatrixDecoderStatus.GENERAL_FAILURE
                 self.notify()
                 self.set_no_image_available_picture()
@@ -126,6 +132,7 @@ class DataMatrixDecoder(StatusObservable):
         while True:
             try:
                 image = await self.queue.get()
+                # image = self.preprocess_frame(image)
                 self.status = DatamatrixDecoderStatus.DECODING
                 self.notify()
                 decoded_messages_with_regions = self.decode_datamatrix(image)
@@ -135,8 +142,10 @@ class DataMatrixDecoder(StatusObservable):
                     coords = ()
                     for i in range(4):
                         coords += ((region[1][i][0], image_size[0] - region[1][i][1]),)
-                    cv2.polylines(image, [numpy.array(coords)], True, (0, 255, 0), max(image_size)//100)
-                cv2.imwrite('region.jpg', cv2.resize(image, (image_size[1]//3, image_size[0]//3), interpolation=cv2.INTER_AREA), [int(cv2.IMWRITE_JPEG_QUALITY), 50])
+                    cv2.polylines(image, [numpy.array(coords)], True, (0, 255, 0), max(image_size) // 100)
+                cv2.imwrite('region.jpg',
+                            cv2.resize(image, (image_size[1] // 3, image_size[0] // 3), interpolation=cv2.INTER_AREA),
+                            [int(cv2.IMWRITE_JPEG_QUALITY), 50])
                 await self.callback(codes)
                 self.queue.task_done()
             except Exception as e:
@@ -153,9 +162,6 @@ class DataMatrixDecoder(StatusObservable):
         """Start both producer and consumer coroutines"""
         while True:
             try:
-                if self.client:
-                    await self.client.aclose()
-                self.client = httpx.AsyncClient(auth=self.auth)
                 await asyncio.gather(
                     self.image_producer(),
                     self.image_consumer()
