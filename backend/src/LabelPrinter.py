@@ -7,14 +7,12 @@ from backend.src.LabelGenerator import LabelGenerator
 
 
 class LabelPrinter(StatusObservable):
-    def __init__(self, title, text):
+    def __init__(self):
         super().__init__()
         self.status = PrinterStatus.INIT
         self.notify()
-        self.title = title
-        self.text = text
         self.cups_printer = None
-        self.label_generator = LabelGenerator('templates/label.html', 'styles/label.css', title, text)
+        self.label_generator = LabelGenerator('templates/label.html', 'styles/label.css')
         try:
             self.cups_conn = cups.Connection()
             self.cups_printer = self.cups_conn.getDefault()

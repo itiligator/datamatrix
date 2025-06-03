@@ -42,11 +42,20 @@ class PrinterStatus(Enum):
         return self.value
 
 
+class LabelGeneratorStatus(Enum):
+    UNDEFINED = "UNDEFINED"
+    INIT = "INIT"
+    READY = "READY"
+    GENERATING = "GENERATING"
+    UNKNOWN_GTIN = "UNKNOWN_GTIN"
+
+
 class DevicesStatusesHandler:
     def __init__(self):
         self._devices_status = {"file_saver": FileSaverStatus.UNDEFINED,
                                 "datamatrix_decoder": DatamatrixDecoderStatus.UNDEFINED,
-                                "printer": PrinterStatus.UNDEFINED}
+                                "printer": PrinterStatus.UNDEFINED,
+                                "ka_generator": LabelGeneratorStatus.UNDEFINED}
 
     def handle_status(self, status):
         self._update_device_status(status)
@@ -58,16 +67,25 @@ class DevicesStatusesHandler:
             self._devices_status["datamatrix_decoder"] = status
         if isinstance(status, PrinterStatus):
             self._devices_status["printer"] = status
+        if isinstance(status, LabelGeneratorStatus):
+            self._devices_status["ka_generator"] = status
 
     def is_error(self):
-        return (self._devices_status["file_saver"] in (
-            FileSaverStatus.GENERAL_FAILURE,
-            FileSaverStatus.UNKNOWN_ERROR) or
-                self._devices_status["datamatrix_decoder"] in (
+        return (False
+                or self._devices_status["file_saver"] in (
+                    FileSaverStatus.GENERAL_FAILURE,
+                    FileSaverStatus.UNKNOWN_ERROR)
+                or self._devices_status["datamatrix_decoder"] in (
                     DatamatrixDecoderStatus.GENERAL_FAILURE,
                     DatamatrixDecoderStatus.UNKNOWN_ERROR,
-                    DatamatrixDecoderStatus.IMAGE_UNAVAILABLE)) or self._devices_status["printer"] in (
-            PrinterStatus.GENERAL_FAILURE, PrinterStatus.UNKNOWN_ERROR, PrinterStatus.PRINTER_NOT_FOUND)
+                    DatamatrixDecoderStatus.IMAGE_UNAVAILABLE)
+                or self._devices_status["printer"] in (
+                    PrinterStatus.GENERAL_FAILURE,
+                    PrinterStatus.UNKNOWN_ERROR,
+                    PrinterStatus.PRINTER_NOT_FOUND)
+                or self._devices_status["ka_generator"] in (
+                    LabelGeneratorStatus.UNKNOWN_GTIN,)
+                )
 
     def get_statuses(self):
         return {k: str(v) for k, v in self._devices_status.items()}
