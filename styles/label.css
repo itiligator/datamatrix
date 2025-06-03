@@ -18,14 +18,20 @@ body {
 
 .grand_title {
     text-align: center;
-    font-size: 6mm;
-    margin-bottom: var(--spacing, 1mm);
+    font-size: 5mm;
+    line-height: 1.1;
+    height: 11mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--spacing, 0.5mm);
+    overflow: hidden;
 }
 
 .title {
     text-align: center;
     font-size: 2mm;
-    margin-bottom: var(--spacing, 2mm);
+    margin-bottom: var(--spacing, 1mm);
 }
 
 .datamatrix {
