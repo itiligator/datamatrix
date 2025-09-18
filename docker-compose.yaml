@@ -6,6 +6,7 @@ services:
     container_name: datamatrix_decoder_app
     volumes:
       - ${RESULTS_DIR}:/app/results
+      - ${DB_DIR}:/app/database
       - /var/run/cups/cups.sock:/var/run/cups/cups.sock
     environment:
       - URL=${URL}
@@ -14,6 +15,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL}
       - HTTP_PORT=${HTTP_PORT}
       - RESULTS_DIR=${RESULTS_DIR}
+      - DB_DIR=${DB_DIR}
       - MAX_FAILED_ATTEMPTS=${MAX_FAILED_ATTEMPTS}
     ports:
       - "${HTTP_PORT}:${HTTP_PORT}"

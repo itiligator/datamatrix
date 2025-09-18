@@ -8,8 +8,8 @@ from typing import List
 class DatabaseManager:
     def __init__(self, db_path: str = 'codes_database.db'):
         """Initialize the database manager with the specified database path."""
-        os.makedirs(os.path.join('results', 'database'), exist_ok=True)
-        self.db_path = os.path.join('results', 'database', db_path)
+        os.makedirs(os.path.join('database'), exist_ok=True)
+        self.db_path = os.path.join('database', db_path)
         self.conn = None
         self.cursor = None
         self._initialize_database()
